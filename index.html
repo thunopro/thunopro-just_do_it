@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>thunopro</title>
+    <link rel="stylesheet" href="style.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&family=Ubuntu+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- KaTeX for LaTeX rendering (faster + copyable source text) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+</head>
+
+<body>
+    <header class="top-header">
+        <div class="container header-flex">
+            <div class="logo">
+                <a href="#/">
+                    <span class="logo-thuno">THUNO</span><span class="logo-pro">PRO</span><span
+                        class="logo-tagline">just do it.</span>
+                </a>
+            </div>
+            <div class="user-panel">
+                <div class="auth-links">
+                    <a href="#" class="btn-login">Login</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <nav class="main-nav">
+        <div class="container nav-flex">
+            <ul class="menu-list">
+                <li><a href="#/" id="nav-today"><i class="fas fa-calendar-day"></i> TODAY</a></li>
+                <li><a href="#/problems" id="nav-problems"><i class="fas fa-list"></i> ALL PROBLEMS</a></li>
+                <li><a href="#/categories" id="nav-categories"><i class="fas fa-layer-group"></i> CATEGORIES</a></li>
+                <li><a href="#/blog" id="nav-blog"><i class="fas fa-pen-nib"></i> BLOG</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- SPA Root Container -->
+    <div id="app-root">
+        <!-- Content will be dynamically injected here by script.js -->
+    </div>
+
+    <footer>
+        <div class="container footer-content">
+            <div class="logo-footer">THUNO<span>PRO</span></div>
+            <p>Knowledge transferred at the speed of thought.</p>
+            <div class="social-links">
+                <a href="#"><i class="fab fa-github"></i></a>
+                <a href="#"><i class="fab fa-telegram"></i></a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="env.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>
