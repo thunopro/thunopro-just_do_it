@@ -1,5 +1,7 @@
-const SUPABASE_URL = (window.ENV && window.ENV.SUPABASE_URL) || "";
-const SUPABASE_KEY = (window.ENV && window.ENV.SUPABASE_KEY) || "";
+// THUNOPRO Dynamic SPA Router
+
+const SUPABASE_URL = "https://jtjmeqlrcwfbewmxqsxy.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0am1lcWxyY3dmYmV3bXhxc3h5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjQzMDU4NSwiZXhwIjoyMDkyMDA2NTg1fQ.TTEQRXKorjHwf1LaJt4CF8qr4Et_j4mQ2ljgdhAhqd0";
 
 async function fetchProblems() {
     try {
