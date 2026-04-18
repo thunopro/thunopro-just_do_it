@@ -64,7 +64,7 @@ async function renderTodayPage() {
     problems.forEach(function (p) {
         html += '<div class="cf-problem-block">';
         // Header
-        html += '<div class="cf-problem-title-bar">';
+        html += '<div class="cf-problem-title-bar" data-pid="' + p.id + '">';
         html += '<a class="cf-prob-title" href="#/problem/' + p.id + '">' + (p.title || p.id) + '</a>';
         if (p.source) html += '<span class="cf-prob-source">' + p.source + '</span>';
         html += '</div>';
@@ -83,6 +83,11 @@ async function renderTodayPage() {
     });
     html += '</div>';
     appRoot.innerHTML = html;
+
+    // Gắn nút "Hoàn thành" vào mỗi title-bar
+    document.querySelectorAll('.cf-problem-title-bar[data-pid]').forEach(function(bar) {
+        bar.appendChild(makeDoneBtn(bar.dataset.pid));
+    });
 }
 
 // ===== PROBLEM DETAIL PAGE =====
@@ -359,3 +364,179 @@ if (toggleBtn) {
         toggleBtn.innerHTML = theme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
     });
 }
+
+// Background logic
+var bgToggleBtn = document.getElementById('bg-toggle');
+if (bgToggleBtn) {
+    bgToggleBtn.addEventListener('click', function() {
+        document.documentElement.classList.toggle('with-bg');
+        var mode = document.documentElement.classList.contains('with-bg') ? 'image' : 'none';
+        localStorage.setItem('bg-mode', mode);
+    });
+}
+
+// ===== SUPABASE AUTH =====
+var _supabase = null;
+function getSupabase() {
+    if (!_supabase) {
+        _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    }
+    return _supabase;
+}
+
+var currentUser = null;
+var completedProblems = new Set();
+
+// Cập nhật nút Auth trên header
+function updateAuthBtn(user) {
+    var btn = document.getElementById('auth-btn');
+    if (!btn) return;
+    if (user) {
+        var email = user.email || '';
+        var display = email.split('@')[0];
+        btn.textContent = display;
+        btn.title = 'Đăng xuất';
+        btn.onclick = function(e) {
+            e.preventDefault();
+            getSupabase().auth.signOut().then(function() {
+                currentUser = null;
+                completedProblems.clear();
+                updateAuthBtn(null);
+                // Refresh checkboxes nếu đang ở trang có bài tập
+                document.querySelectorAll('.prob-done-btn').forEach(function(b) {
+                    b.classList.remove('done');
+                    b.textContent = '';
+                    b.title = 'Đăng nhập để theo dõi';
+                });
+            });
+        };
+    } else {
+        btn.textContent = 'Login';
+        btn.title = 'Đăng nhập';
+        btn.onclick = function(e) {
+            e.preventDefault();
+            openAuthModal(false);
+        };
+    }
+}
+
+// Tải danh sách bài đã hoàn thành
+async function loadCompletedProblems(userId) {
+    try {
+        var sb = getSupabase();
+        var { data } = await sb.from('user_problems').select('problem_id').eq('user_id', userId).eq('completed', true);
+        completedProblems.clear();
+        if (data) data.forEach(function(r) { completedProblems.add(r.problem_id); });
+        // Refresh các nút trên trang
+        document.querySelectorAll('.prob-done-btn').forEach(function(btn) {
+            var pid = btn.dataset.pid;
+            if (completedProblems.has(pid)) { btn.classList.add('done'); btn.textContent = '✓'; }
+            else { btn.classList.remove('done'); btn.textContent = ''; }
+        });
+    } catch(e) { console.error('loadCompletedProblems', e); }
+}
+
+// Toggle hoàn thành bài tập
+async function toggleProblemDone(problemId, btn) {
+    if (!currentUser) { openAuthModal(false); return; }
+    var sb = getSupabase();
+    var isDone = completedProblems.has(problemId);
+    try {
+        if (isDone) {
+            await sb.from('user_problems').delete().eq('user_id', currentUser.id).eq('problem_id', problemId);
+            completedProblems.delete(problemId);
+            btn.classList.remove('done'); btn.textContent = '';
+        } else {
+            await sb.from('user_problems').upsert({ user_id: currentUser.id, problem_id: problemId, completed: true });
+            completedProblems.add(problemId);
+            btn.classList.add('done'); btn.textContent = '✓';
+        }
+    } catch(e) { console.error('toggleProblemDone', e); }
+}
+
+// Tạo nút tick hoàn thành
+function makeDoneBtn(problemId) {
+    var wrap = document.createElement('div');
+    wrap.className = 'prob-done-wrap';
+    var btn = document.createElement('button');
+    btn.className = 'prob-done-btn' + (completedProblems.has(problemId) ? ' done' : '');
+    btn.dataset.pid = problemId;
+    btn.textContent = completedProblems.has(problemId) ? '✓' : '';
+    btn.title = currentUser ? 'Đánh dấu hoàn thành' : 'Đăng nhập để theo dõi';
+    btn.addEventListener('click', function(e) { e.preventDefault(); toggleProblemDone(problemId, btn); });
+    var lbl = document.createElement('span');
+    lbl.className = 'prob-done-label';
+    lbl.textContent = 'Hoàn thành';
+    lbl.addEventListener('click', function(e) { e.preventDefault(); toggleProblemDone(problemId, btn); });
+    wrap.appendChild(btn); wrap.appendChild(lbl);
+    return wrap;
+}
+
+// Modal Auth
+var authIsRegister = false;
+function openAuthModal(isRegister) {
+    authIsRegister = isRegister;
+    document.getElementById('auth-modal').style.display = 'flex';
+    document.getElementById('auth-title').textContent = isRegister ? 'Tạo tài khoản' : 'Đăng nhập';
+    document.getElementById('auth-sub').textContent = isRegister ? 'Tham gia ThunoPro để theo dõi bài tập!' : 'Chào mừng trở lại ThunoPro!';
+    document.getElementById('btn-submit-auth').textContent = isRegister ? 'Đăng ký' : 'Đăng nhập';
+    document.getElementById('auth-toggle-mode').textContent = isRegister ? 'Đã có tài khoản? Đăng nhập' : 'Chưa có tài khoản? Đăng ký ngay';
+    document.getElementById('auth-msg').textContent = '';
+    document.getElementById('auth-email').value = '';
+    document.getElementById('auth-pass').value = '';
+    document.getElementById('auth-email').focus();
+}
+
+document.getElementById('auth-modal').addEventListener('click', function(e) {
+    if (e.target === this) this.style.display = 'none';
+});
+document.getElementById('auth-toggle-mode').addEventListener('click', function(e) {
+    e.preventDefault();
+    openAuthModal(!authIsRegister);
+});
+
+document.getElementById('btn-submit-auth').addEventListener('click', async function() {
+    var email = document.getElementById('auth-email').value.trim();
+    var pass = document.getElementById('auth-pass').value;
+    var msg = document.getElementById('auth-msg');
+    if (!email || !pass) { msg.textContent = 'Vui lòng nhập đủ thông tin.'; return; }
+    msg.textContent = '';
+    this.disabled = true; this.textContent = 'Đang xử lý...';
+    var sb = getSupabase();
+    try {
+        var result;
+        if (authIsRegister) {
+            result = await sb.auth.signUp({ email: email, password: pass });
+        } else {
+            result = await sb.auth.signInWithPassword({ email: email, password: pass });
+        }
+        if (result.error) {
+            msg.textContent = result.error.message;
+        } else {
+            document.getElementById('auth-modal').style.display = 'none';
+            if (authIsRegister) {
+                alert('Đăng ký thành công! Kiểm tra email để xác nhận tài khoản (nếu cần).');
+            }
+        }
+    } catch(e) { msg.textContent = 'Có lỗi xảy ra. Thử lại sau.'; }
+    finally { this.disabled = false; this.textContent = authIsRegister ? 'Đăng ký' : 'Đăng nhập'; }
+});
+
+// Listen trạng thái đăng nhập thay đổi
+getSupabase().auth.onAuthStateChange(function(event, session) {
+    currentUser = session ? session.user : null;
+    updateAuthBtn(currentUser);
+    if (currentUser) loadCompletedProblems(currentUser.id);
+    else completedProblems.clear();
+});
+
+// Lấy session hiện tại khi load trang
+getSupabase().auth.getSession().then(function(res) {
+    if (res.data && res.data.session) {
+        currentUser = res.data.session.user;
+        updateAuthBtn(currentUser);
+        loadCompletedProblems(currentUser.id);
+    } else {
+        updateAuthBtn(null);
+    }
+});
