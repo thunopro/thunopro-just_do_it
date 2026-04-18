@@ -13,6 +13,11 @@
     <!-- KaTeX for LaTeX rendering (faster + copyable source text) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script>
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark-mode');
+        }
+    </script>
 </head>
 
 <body>
@@ -26,6 +31,7 @@
             </div>
             <div class="user-panel">
                 <div class="auth-links">
+                    <button id="theme-toggle" class="btn-icon" aria-label="Toggle Theme"><i class="fas fa-moon"></i></button>
                     <a href="#" class="btn-login">Login</a>
                 </div>
             </div>

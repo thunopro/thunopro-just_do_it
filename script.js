@@ -73,8 +73,11 @@ async function renderTodayPage() {
         html += renderLatex(p.summary || '');
         html += '</div>';
         // Footer link
-        html += '<div class="cf-prob-footer">';
-        html += '<a href="#/problem/' + p.id + '" class="cf-view-analysis">Xem phân tích →</a>';
+        html += '<div class="cf-prob-footer" style="display: flex; gap: 12px; margin-top: 12px;">';
+        if (p.source_url) {
+            html += '<a href="' + p.source_url + '" target="_blank" class="btn-outline">Link bài tập</a>';
+        }
+        html += '<a href="#/problem/' + p.id + '" class="btn-primary">Xem phân tích</a>';
         html += '</div>';
         html += '</div>';
     });
@@ -342,3 +345,17 @@ async function router() {
 
 window.addEventListener('hashchange', router);
 window.addEventListener('load', router);
+
+// Theme logic
+var toggleBtn = document.getElementById('theme-toggle');
+if (toggleBtn) {
+    if (document.documentElement.classList.contains('dark-mode')) {
+        toggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
+    }
+    toggleBtn.addEventListener('click', function() {
+        document.documentElement.classList.toggle('dark-mode');
+        var theme = document.documentElement.classList.contains('dark-mode') ? 'dark' : 'light';
+        localStorage.setItem('theme', theme);
+        toggleBtn.innerHTML = theme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+    });
+}
