@@ -7,7 +7,7 @@
     <title>thunopro</title>
     <link rel="stylesheet" href="style.css">
     <link
-        href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&family=Ubuntu+Mono:wght@400;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&family=Lora:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Ubuntu+Mono:wght@400;700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- KaTeX for LaTeX rendering (faster + copyable source text) -->
@@ -62,10 +62,9 @@
     <footer>
         <div class="container footer-content">
             <div class="logo-footer">THUNO<span>PRO</span></div>
-            <p>Knowledge transferred at the speed of thought.</p>
             <div class="social-links">
-                <a href="#"><i class="fab fa-github"></i></a>
-                <a href="#"><i class="fab fa-telegram"></i></a>
+                <a href="https://github.com/thunopro" target="_blank"><i class="fab fa-github"></i></a>
+                <a href="https://www.youtube.com/@thunoprosolveIMO" target="_blank"><i class="fab fa-youtube"></i></a>
             </div>
         </div>
     </footer>
@@ -74,13 +73,14 @@
     <div id="auth-modal" class="modal-overlay" style="display:none;">
         <div class="modal-box">
             <h2 id="auth-title">Đăng nhập</h2>
-            <p class="modal-sub" id="auth-sub">Chào mừng trở lại ThunoPro!</p>
             <p class="modal-error" id="auth-msg"></p>
-            <input type="email" id="auth-email" class="modal-input" placeholder="Email của bạn">
-            <input type="password" id="auth-pass" class="modal-input" placeholder="Mật khẩu">
-            <button id="btn-submit-auth" class="btn-primary" style="width:100%; padding: 10px;">Đăng nhập</button>
+            <form id="auth-form" autocomplete="on">
+                <input type="email" id="auth-email" name="email" class="modal-input" placeholder="Email" autocomplete="email">
+                <input type="password" id="auth-pass" name="password" class="modal-input" placeholder="Mật khẩu" autocomplete="current-password">
+                <button type="submit" id="btn-submit-auth" class="btn-primary" style="width:100%; padding: 10px;">Đăng nhập</button>
+            </form>
             <p class="modal-switch">
-                Chưa có tài khoản? <a href="#" id="auth-toggle-mode">Đăng ký ngay</a>
+                <a href="#" id="auth-toggle-mode">Đăng ký tài khoản</a>
             </p>
         </div>
     </div>

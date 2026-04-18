@@ -134,10 +134,15 @@ async function renderProblemDetail(id) {
 var _allProblemsCache = [];
 
 function buildProblemsTable(list) {
-    if (!list.length) return '<tr><td colspan="5" style="padding:20px;color:#888;">Không tìm thấy bài nào.</td></tr>';
+    if (!list.length) return '<tr><td colspan="6" style="padding:20px;color:#888;">Không tìm thấy bài nào.</td></tr>';
     return list.map(function (p) {
         var tagsHtml = (p.tags || []).map(function (t) { return '<span class="cf-tag">' + t + '</span>'; }).join(' ');
+        var isDone = completedProblems.has(p.id);
+        var doneCell = isDone
+            ? '<td style="text-align:center;"><span style="color:#22c55e;font-size:16px;font-weight:700;">✓</span></td>'
+            : '<td style="text-align:center;"><span style="color:var(--border);font-size:14px;">○</span></td>';
         return '<tr>' +
+            doneCell +
             '<td class="cf-td-id">' + (p.id || '') + '</td>' +
             '<td><a href="#/problem/' + p.id + '" class="cf-table-link">' + (p.title || '') + '</a></td>' +
             '<td><div class="cf-tags">' + (tagsHtml || '<span style="color:#ccc">—</span>') + '</div></td>' +
@@ -173,7 +178,7 @@ async function renderAllProblems() {
     html += '<input type="text" id="prob-search" placeholder="Tìm bài..." autocomplete="off">';
     html += '</div>';
     html += '<table class="cf-table"><thead><tr>';
-    html += '<th style="width:90px">#</th><th>Tên bài</th><th>Tags</th><th style="width:80px">Độ khó</th><th style="width:130px">Nguồn</th>';
+    html += '<th style="width:36px;text-align:center;">✓</th><th style="width:90px">#</th><th>Tên bài</th><th>Tags</th><th style="width:80px">Độ khó</th><th style="width:130px">Nguồn</th>';
     html += '</tr></thead><tbody id="prob-tbody">';
     html += buildProblemsTable(_allProblemsCache);
     html += '</tbody></table>';
@@ -264,6 +269,17 @@ function formatDate(iso) {
     return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+var _activeBlogCat = '';
+
+function buildBlogCards(list) {
+    if (!list.length) return '<p class="blog-empty">Chưa có bài nào trong mục này.</p>';
+    return list.map(function(p) {
+        return '<div class="blog-card">' +
+            '<h2 class="blog-title"><a href="#/blog/' + p.id + '">' + (p.title || '') + '</a></h2>' +
+            '</div>';
+    }).join('');
+}
+
 async function renderBlogList() {
     var appRoot = document.getElementById('app-root');
     appRoot.innerHTML = '<div class="cf-content"><div class="cf-loading">Đang tải...</div></div>';
@@ -274,21 +290,47 @@ async function renderBlogList() {
         return;
     }
 
-    var html = '<div class="cf-content">';
-    posts.forEach(function (p) {
-        var cats = (p.category || []).map(function (c) { return '<span class="cf-tag">' + c + '</span>'; }).join(' ');
-        html += '<div class="blog-card">';
-        html += '<div class="blog-card-meta">';
-        html += '<span class="blog-date">' + formatDate(p.created_at) + '</span>';
-        if (cats) html += '<span class="blog-cats">' + cats + '</span>';
-        html += '</div>';
-        html += '<h2 class="blog-title"><a href="#/blog/' + p.id + '">' + (p.title || '') + '</a></h2>';
-        if (p.excerpt) html += '<p class="blog-excerpt">' + p.excerpt + '</p>';
-        html += '<a href="#/blog/' + p.id + '" class="blog-read-more">Đọc tiếp →</a>';
-        html += '</div>';
+    var categories = ['đọc sách', 'bản thân', 'cách học tin'];
+    var hotPosts = posts.filter(function(p) { return p.hot; });
+    var mainPosts = _activeBlogCat
+        ? posts.filter(function(p) { return (p.category || []).includes(_activeBlogCat); })
+        : posts;
+
+    // Sidebar HTML
+    var sidebarHtml = '<div class="blog-sidebar">';
+    if (hotPosts.length) {
+        sidebarHtml += '<div class="blog-sidebar-section">';
+        sidebarHtml += '<div class="blog-sidebar-title">🔥 Nổi bật</div>';
+        hotPosts.forEach(function(p) {
+            sidebarHtml += '<a href="#/blog/' + p.id + '" class="blog-sidebar-link">' + (p.title || '') + '</a>';
+        });
+        sidebarHtml += '</div>';
+    }
+    sidebarHtml += '<div class="blog-sidebar-section">';
+    sidebarHtml += '<div class="blog-sidebar-title">Danh mục</div>';
+    sidebarHtml += '<a href="#" class="blog-cat-btn' + (!_activeBlogCat ? ' active' : '') + '" data-cat="">Tất cả</a>';
+    categories.forEach(function(cat) {
+        sidebarHtml += '<a href="#" class="blog-cat-btn' + (_activeBlogCat === cat ? ' active' : '') + '" data-cat="' + cat + '">' + cat.charAt(0).toUpperCase() + cat.slice(1) + '</a>';
     });
+    sidebarHtml += '</div>';
+    sidebarHtml += '</div>';
+
+    var html = '<div class="blog-layout">';
+    html += '<div class="blog-main">';
+    if (_activeBlogCat) html += '<div class="blog-cat-header">' + _activeBlogCat.charAt(0).toUpperCase() + _activeBlogCat.slice(1) + '</div>';
+    html += '<div class="blog-list">' + buildBlogCards(mainPosts) + '</div>';
+    html += '</div>';
+    html += sidebarHtml;
     html += '</div>';
     appRoot.innerHTML = html;
+
+    document.querySelectorAll('.blog-cat-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            _activeBlogCat = this.dataset.cat;
+            renderBlogList();
+        });
+    });
 }
 
 async function renderBlogDetail(id) {
@@ -301,17 +343,14 @@ async function renderBlogDetail(id) {
         return;
     }
 
-    var cats = (p.category || []).map(function (c) { return '<span class="cf-tag">' + c + '</span>'; }).join(' ');
-    var html = '<div class="cf-content">';
-    html += '<div class="blog-detail-header">';
-    html += '<a href="#/blog" class="cf-back-link">← Blog</a>';
-    html += '<div class="blog-card-meta" style="margin-top:12px;">';
-    html += '<span class="blog-date">' + formatDate(p.created_at) + '</span>';
-    if (cats) html += '<span class="blog-cats">' + cats + '</span>';
-    html += '</div>';
-    html += '<h1 class="blog-detail-title">' + (p.title || '') + '</h1>';
-    html += '</div>';
+    var html = '<div class="blog-article-wrap">';
+    html += '<div class="blog-article">';
+    html += '<a href="#/blog" class="blog-back">← Blog</a>';
+    html += '<p class="blog-article-date">' + formatDate(p.created_at) + '</p>';
+    html += '<h1 class="blog-article-title">' + (p.title || '') + '</h1>';
+    html += '<div class="blog-article-divider"></div>';
     html += '<div class="blog-body">' + (p.content || '') + '</div>';
+    html += '</div>';
     html += '</div>';
     appRoot.innerHTML = html;
 }
@@ -477,13 +516,14 @@ var authIsRegister = false;
 function openAuthModal(isRegister) {
     authIsRegister = isRegister;
     document.getElementById('auth-modal').style.display = 'flex';
-    document.getElementById('auth-title').textContent = isRegister ? 'Tạo tài khoản' : 'Đăng nhập';
-    document.getElementById('auth-sub').textContent = isRegister ? 'Tham gia ThunoPro để theo dõi bài tập!' : 'Chào mừng trở lại ThunoPro!';
+    document.getElementById('auth-title').textContent = isRegister ? 'Đăng ký' : 'Đăng nhập';
     document.getElementById('btn-submit-auth').textContent = isRegister ? 'Đăng ký' : 'Đăng nhập';
-    document.getElementById('auth-toggle-mode').textContent = isRegister ? 'Đã có tài khoản? Đăng nhập' : 'Chưa có tài khoản? Đăng ký ngay';
+    document.getElementById('btn-submit-auth').type = isRegister ? 'submit' : 'submit';
+    document.getElementById('auth-toggle-mode').textContent = isRegister ? 'Đã có tài khoản? Đăng nhập' : 'Đăng ký tài khoản';
+    // Cập nhật autocomplete cho phù hợp mode
+    document.getElementById('auth-pass').autocomplete = isRegister ? 'new-password' : 'current-password';
     document.getElementById('auth-msg').textContent = '';
-    document.getElementById('auth-email').value = '';
-    document.getElementById('auth-pass').value = '';
+    // Không xóa value để browser autofill hoạt động
     document.getElementById('auth-email').focus();
 }
 
@@ -495,13 +535,15 @@ document.getElementById('auth-toggle-mode').addEventListener('click', function(e
     openAuthModal(!authIsRegister);
 });
 
-document.getElementById('btn-submit-auth').addEventListener('click', async function() {
+async function handleAuthSubmit(e) {
+    e.preventDefault();
     var email = document.getElementById('auth-email').value.trim();
     var pass = document.getElementById('auth-pass').value;
     var msg = document.getElementById('auth-msg');
+    var btn = document.getElementById('btn-submit-auth');
     if (!email || !pass) { msg.textContent = 'Vui lòng nhập đủ thông tin.'; return; }
     msg.textContent = '';
-    this.disabled = true; this.textContent = 'Đang xử lý...';
+    btn.disabled = true; btn.textContent = '...';
     var sb = getSupabase();
     try {
         var result;
@@ -514,13 +556,15 @@ document.getElementById('btn-submit-auth').addEventListener('click', async funct
             msg.textContent = result.error.message;
         } else {
             document.getElementById('auth-modal').style.display = 'none';
-            if (authIsRegister) {
-                alert('Đăng ký thành công! Kiểm tra email để xác nhận tài khoản (nếu cần).');
+            if (authIsRegister && result.data && !result.data.session) {
+                alert('Kiểm tra email để xác nhận tài khoản!');
             }
         }
-    } catch(e) { msg.textContent = 'Có lỗi xảy ra. Thử lại sau.'; }
-    finally { this.disabled = false; this.textContent = authIsRegister ? 'Đăng ký' : 'Đăng nhập'; }
-});
+    } catch(err) { msg.textContent = 'Có lỗi. Thử lại sau.'; }
+    finally { btn.disabled = false; btn.textContent = authIsRegister ? 'Đăng ký' : 'Đăng nhập'; }
+}
+
+document.getElementById('auth-form').addEventListener('submit', handleAuthSubmit);
 
 // Listen trạng thái đăng nhập thay đổi
 getSupabase().auth.onAuthStateChange(function(event, session) {
