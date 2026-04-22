@@ -298,6 +298,13 @@ async function renderBlogList() {
 
     // Sidebar HTML
     var sidebarHtml = '<div class="blog-sidebar">';
+    
+    if (currentUser) {
+        sidebarHtml += '<div class="blog-sidebar-section">';
+        sidebarHtml += '<a href="#/blog/new" class="btn-primary" style="width:100%; text-align:center; display:block; padding:8px; font-size:14px;"><i class="fas fa-plus"></i> Viết bài mới</a>';
+        sidebarHtml += '</div>';
+    }
+
     if (hotPosts.length) {
         sidebarHtml += '<div class="blog-sidebar-section">';
         sidebarHtml += '<div class="blog-sidebar-title">🔥 Nổi bật</div>';
@@ -355,6 +362,97 @@ async function renderBlogDetail(id) {
     appRoot.innerHTML = html;
 }
 
+async function renderNewBlogForm() {
+    var appRoot = document.getElementById('app-root');
+    var html = '<div class="blog-article-wrap"><div class="blog-article">';
+    html += '<a href="#/blog" class="blog-back">← Quay lại Blog</a>';
+    html += '<h1 class="blog-article-title">Viết bài mới</h1>';
+    
+    html += '<form id="new-blog-form" style="display:flex; flex-direction:column; gap:16px;">';
+    
+    html += '<div>';
+    html += '<label style="font-weight:600; margin-bottom:8px; display:block;">Tiêu đề</label>';
+    html += '<input type="text" id="nb-title" required class="modal-input" placeholder="Ví dụ: Kỷ luật bản thân là chìa khóa...">';
+    html += '</div>';
+
+    html += '<div>';
+    html += '<label style="font-weight:600; margin-bottom:8px; display:block;">Danh mục</label>';
+    html += '<select id="nb-category" class="modal-input">';
+    html += '<option value="bản thân">Bản thân</option>';
+    html += '<option value="đọc sách">Đọc sách</option>';
+    html += '<option value="cách học tin">Cách học tin</option>';
+    html += '</select>';
+    html += '</div>';
+
+    html += '<div>';
+    html += '<label style="font-weight:600; margin-bottom:8px; display:block;">Nội dung (hỗ trợ HTML)</label>';
+    html += '<textarea id="nb-content" required class="modal-input" style="height:200px; resize:vertical; font-family:inherit;" placeholder="<p>Bắt đầu viết...</p>"></textarea>';
+    html += '</div>';
+
+    html += '<button type="submit" id="nb-submit" class="btn-primary" style="align-self:flex-start; padding: 10px 24px;">Đăng bài</button>';
+    html += '<p id="nb-msg" style="color:red; font-size:13px;"></p>';
+
+    html += '</form>';
+    html += '</div></div>';
+    
+    appRoot.innerHTML = html;
+
+    document.getElementById('new-blog-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        if (!currentUser) {
+            alert("Bạn cần đăng nhập để đăng bài!");
+            return;
+        }
+
+        var title = document.getElementById('nb-title').value.trim();
+        var category = document.getElementById('nb-category').value;
+        var content = document.getElementById('nb-content').value.trim();
+        var msg = document.getElementById('nb-msg');
+        var btn = document.getElementById('nb-submit');
+
+        if (!title) return;
+
+        btn.disabled = true;
+        btn.textContent = 'Đang đăng...';
+
+        // Tạo id ngẫu nhiên nhưng có chứa title để đẹp link
+        var id = title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now().toString().slice(-4);
+        
+        var newPost = {
+            id: id,
+            title: title,
+            content: content,
+            category: [category],
+            hot: false
+        };
+
+        try {
+            var res = await fetch(SUPABASE_URL + '/rest/v1/blogs', {
+                method: 'POST',
+                headers: { 
+                    'apikey': SUPABASE_KEY, 
+                    'Authorization': 'Bearer ' + SUPABASE_KEY,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify(newPost)
+            });
+
+            if (!res.ok) {
+                var err = await res.json();
+                msg.textContent = 'Lỗi: ' + (err.message || res.status);
+            } else {
+                window.location.hash = '#/blog/' + id;
+            }
+        } catch (err) {
+            msg.textContent = 'Lỗi mạng: ' + err.message;
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Đăng bài';
+        }
+    });
+}
+
 // ===== ROUTER =====
 async function router() {
     var path = window.location.hash.slice(1) || '/';
@@ -370,8 +468,10 @@ async function router() {
         appRoot.innerHTML = categoriesHTML;
     } else if (path === '/blog') {
         await renderBlogList();
+    } else if (path === '/blog/new') {
+        await renderNewBlogForm();
     } else if (path.startsWith('/blog/')) {
-        var bid = path.slice('/blog/'.length);
+        var bid = path.slice('/blog/new'.length === path.length ? 0 : '/blog/'.length); // Safe check
         await renderBlogDetail(bid);
     } else if (path.startsWith('/problem/')) {
         var id = path.slice('/problem/'.length);
