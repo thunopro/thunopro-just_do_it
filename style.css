@@ -594,3 +594,25 @@ html.dark-mode .blog-body code { background: #2a2a2a; }
     background: #22c55e; border-color: #22c55e; color: #fff;
 }
 .prob-done-btn:hover:not(.done) { border-color: var(--accent); }
+
+/* ===== QUILL EDITOR ===== */
+.ql-toolbar.ql-snow {
+    border-color: var(--border);
+    background: var(--border-light);
+    border-radius: var(--radius) var(--radius) 0 0;
+    font-family: inherit;
+}
+.ql-container.ql-snow {
+    border-color: var(--border);
+    border-radius: 0 0 var(--radius) var(--radius);
+    font-family: inherit;
+    font-size: 15px;
+}
+.ql-editor {
+    min-height: 300px;
+    color: var(--text);
+}
+.ql-snow .ql-stroke { stroke: var(--text); }
+.ql-snow .ql-fill, .ql-snow .ql-stroke.ql-fill { fill: var(--text); }
+.ql-snow .ql-picker { color: var(--text); }
+.ql-snow .ql-picker-options { background-color: var(--surface); border-color: var(--border); }

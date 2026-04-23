@@ -299,11 +299,9 @@ async function renderBlogList() {
     // Sidebar HTML
     var sidebarHtml = '<div class="blog-sidebar">';
     
-    if (currentUser) {
-        sidebarHtml += '<div class="blog-sidebar-section">';
-        sidebarHtml += '<a href="#/blog/new" class="btn-primary" style="width:100%; text-align:center; display:block; padding:8px; font-size:14px;"><i class="fas fa-plus"></i> Viết bài mới</a>';
-        sidebarHtml += '</div>';
-    }
+    sidebarHtml += '<div class="blog-sidebar-section">';
+    sidebarHtml += '<a href="#/blog/new" class="btn-primary" style="width:100%; text-align:center; display:block; padding:8px; font-size:14px;"><i class="fas fa-plus"></i> Viết bài mới</a>';
+    sidebarHtml += '</div>';
 
     if (hotPosts.length) {
         sidebarHtml += '<div class="blog-sidebar-section">';
@@ -385,17 +383,37 @@ async function renderNewBlogForm() {
     html += '</div>';
 
     html += '<div>';
-    html += '<label style="font-weight:600; margin-bottom:8px; display:block;">Nội dung (hỗ trợ HTML)</label>';
-    html += '<textarea id="nb-content" required class="modal-input" style="height:200px; resize:vertical; font-family:inherit;" placeholder="<p>Bắt đầu viết...</p>"></textarea>';
+    html += '<label style="font-weight:600; margin-bottom:8px; display:block;">Nội dung</label>';
+    html += '<div id="nb-editor-container" style="background: var(--bg); font-family: inherit;"></div>';
     html += '</div>';
 
-    html += '<button type="submit" id="nb-submit" class="btn-primary" style="align-self:flex-start; padding: 10px 24px;">Đăng bài</button>';
+    html += '<div style="display:flex; align-items:center; gap: 16px; margin-top: 10px;">';
+    html += '<button type="submit" id="nb-submit" class="btn-primary" style="padding: 10px 24px;">Đăng bài</button>';
+    if (!currentUser) {
+        html += '<span style="color:#ef4444; font-size:13px;">Bạn cần đăng nhập để có thể đăng bài.</span>';
+    }
+    html += '</div>';
     html += '<p id="nb-msg" style="color:red; font-size:13px;"></p>';
 
     html += '</form>';
     html += '</div></div>';
     
     appRoot.innerHTML = html;
+
+    // Khởi tạo Quill Editor
+    var quill = new Quill('#nb-editor-container', {
+        theme: 'snow',
+        placeholder: 'Bắt đầu viết nội dung bài blog...',
+        modules: {
+            toolbar: [
+                [{ 'header': [1, 2, 3, false] }],
+                ['bold', 'italic', 'underline', 'strike', 'blockquote', 'code-block'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                ['link', 'image', 'video'],
+                ['clean']
+            ]
+        }
+    });
 
     document.getElementById('new-blog-form').addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -406,11 +424,13 @@ async function renderNewBlogForm() {
 
         var title = document.getElementById('nb-title').value.trim();
         var category = document.getElementById('nb-category').value;
-        var content = document.getElementById('nb-content').value.trim();
+        var content = quill.root.innerHTML.trim();
+        if (content === '<p><br></p>') content = '';
         var msg = document.getElementById('nb-msg');
         var btn = document.getElementById('nb-submit');
 
-        if (!title) return;
+        if (!title) { msg.textContent = "Vui lòng nhập tiêu đề."; return; }
+        if (!content) { msg.textContent = "Vui lòng nhập nội dung."; return; }
 
         btn.disabled = true;
         btn.textContent = 'Đang đăng...';
