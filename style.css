@@ -575,6 +575,17 @@ html.dark-mode .blog-body code { background: #2a2a2a; }
 .modal-switch a { color: var(--accent); font-weight: 600; text-decoration: none; }
 .modal-switch a:hover { text-decoration: underline; }
 
+.auth-options a { color: var(--text-muted); text-decoration: none; }
+.auth-options a:hover { color: var(--text); text-decoration: underline; }
+
+.auth-divider {
+    display: flex; align-items: center; text-align: center; margin: 16px 0; color: var(--text-muted); font-size: 13px;
+}
+.auth-divider::before, .auth-divider::after {
+    content: ''; flex: 1; border-bottom: 1px solid var(--border);
+}
+.auth-divider span { padding: 0 10px; }
+
 /* ===== PROBLEM COMPLETE CHECKBOX ===== */
 .prob-done-wrap {
     display: flex; align-items: center; gap: 6px;

@@ -82,8 +82,23 @@
             <form id="auth-form" autocomplete="on">
                 <input type="email" id="auth-email" name="email" class="modal-input" placeholder="Email" autocomplete="email">
                 <input type="password" id="auth-pass" name="password" class="modal-input" placeholder="Mật khẩu" autocomplete="current-password">
+                
+                <div id="auth-options" class="auth-options" style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 14px;">
+                    <label style="color: var(--text-muted); cursor: pointer;"><input type="checkbox" id="auth-remember" style="margin-right: 4px; accent-color: var(--text);"> Ghi nhớ</label>
+                    <a href="#" id="auth-forgot">Quên mật khẩu?</a>
+                </div>
+
                 <button type="submit" id="btn-submit-auth" class="btn-primary" style="width:100%; padding: 10px;">Đăng nhập</button>
             </form>
+
+            <div class="auth-divider">
+                <span>Hoặc</span>
+            </div>
+            
+            <button id="btn-google-login" class="btn-outline" style="width: 100%; padding: 10px; margin-bottom: 14px;">
+                <i class="fab fa-google" style="margin-right: 8px;"></i> Đăng nhập bằng Google
+            </button>
+
             <p class="modal-switch">
                 <a href="#" id="auth-toggle-mode">Đăng ký tài khoản</a>
             </p>

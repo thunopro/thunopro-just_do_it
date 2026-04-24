@@ -290,11 +290,8 @@ async function renderBlogList() {
         return;
     }
 
-    var categories = ['đọc sách', 'bản thân', 'cách học tin'];
     var hotPosts = posts.filter(function(p) { return p.hot; });
-    var mainPosts = _activeBlogCat
-        ? posts.filter(function(p) { return (p.category || []).includes(_activeBlogCat); })
-        : posts;
+    var mainPosts = posts;
 
     // Sidebar HTML
     var sidebarHtml = '<div class="blog-sidebar">';
@@ -311,31 +308,16 @@ async function renderBlogList() {
         });
         sidebarHtml += '</div>';
     }
-    sidebarHtml += '<div class="blog-sidebar-section">';
-    sidebarHtml += '<div class="blog-sidebar-title">Danh mục</div>';
-    sidebarHtml += '<a href="#" class="blog-cat-btn' + (!_activeBlogCat ? ' active' : '') + '" data-cat="">Tất cả</a>';
-    categories.forEach(function(cat) {
-        sidebarHtml += '<a href="#" class="blog-cat-btn' + (_activeBlogCat === cat ? ' active' : '') + '" data-cat="' + cat + '">' + cat.charAt(0).toUpperCase() + cat.slice(1) + '</a>';
-    });
-    sidebarHtml += '</div>';
     sidebarHtml += '</div>';
 
     var html = '<div class="blog-layout">';
     html += '<div class="blog-main">';
-    if (_activeBlogCat) html += '<div class="blog-cat-header">' + _activeBlogCat.charAt(0).toUpperCase() + _activeBlogCat.slice(1) + '</div>';
     html += '<div class="blog-list">' + buildBlogCards(mainPosts) + '</div>';
     html += '</div>';
     html += sidebarHtml;
     html += '</div>';
     appRoot.innerHTML = html;
 
-    document.querySelectorAll('.blog-cat-btn').forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            _activeBlogCat = this.dataset.cat;
-            renderBlogList();
-        });
-    });
 }
 
 async function renderBlogDetail(id) {
@@ -373,14 +355,7 @@ async function renderNewBlogForm() {
     html += '<input type="text" id="nb-title" required class="modal-input" placeholder="Ví dụ: Kỷ luật bản thân là chìa khóa...">';
     html += '</div>';
 
-    html += '<div>';
-    html += '<label style="font-weight:600; margin-bottom:8px; display:block;">Danh mục</label>';
-    html += '<select id="nb-category" class="modal-input">';
-    html += '<option value="bản thân">Bản thân</option>';
-    html += '<option value="đọc sách">Đọc sách</option>';
-    html += '<option value="cách học tin">Cách học tin</option>';
-    html += '</select>';
-    html += '</div>';
+
 
     html += '<div>';
     html += '<label style="font-weight:600; margin-bottom:8px; display:block;">Nội dung</label>';
@@ -423,7 +398,7 @@ async function renderNewBlogForm() {
         }
 
         var title = document.getElementById('nb-title').value.trim();
-        var category = document.getElementById('nb-category').value;
+
         var content = quill.root.innerHTML.trim();
         if (content === '<p><br></p>') content = '';
         var msg = document.getElementById('nb-msg');
@@ -442,7 +417,6 @@ async function renderNewBlogForm() {
             id: id,
             title: title,
             content: content,
-            category: [category],
             hot: false
         };
 
@@ -640,6 +614,11 @@ function openAuthModal(isRegister) {
     document.getElementById('btn-submit-auth').textContent = isRegister ? 'Đăng ký' : 'Đăng nhập';
     document.getElementById('btn-submit-auth').type = isRegister ? 'submit' : 'submit';
     document.getElementById('auth-toggle-mode').textContent = isRegister ? 'Đã có tài khoản? Đăng nhập' : 'Đăng ký tài khoản';
+    
+    // Ẩn/Hiện phần Ghi nhớ & Quên mật khẩu
+    var authOptions = document.getElementById('auth-options');
+    if (authOptions) authOptions.style.display = isRegister ? 'none' : 'flex';
+    
     // Cập nhật autocomplete cho phù hợp mode
     document.getElementById('auth-pass').autocomplete = isRegister ? 'new-password' : 'current-password';
     document.getElementById('auth-msg').textContent = '';
@@ -685,6 +664,61 @@ async function handleAuthSubmit(e) {
 }
 
 document.getElementById('auth-form').addEventListener('submit', handleAuthSubmit);
+
+// Quên mật khẩu
+var btnForgot = document.getElementById('auth-forgot');
+if (btnForgot) {
+    btnForgot.addEventListener('click', async function(e) {
+        e.preventDefault();
+        var email = document.getElementById('auth-email').value.trim();
+        var msg = document.getElementById('auth-msg');
+        if (!email) {
+            msg.style.color = '#ef4444';
+            msg.textContent = 'Vui lòng nhập email để đặt lại mật khẩu.';
+            return;
+        }
+        var sb = getSupabase();
+        msg.style.color = 'var(--text-muted)';
+        msg.textContent = 'Đang gửi email...';
+        try {
+            var { data, error } = await sb.auth.resetPasswordForEmail(email, {
+                redirectTo: window.location.origin + '/reset-password.html',
+            });
+            if (error) {
+                msg.style.color = '#ef4444';
+                msg.textContent = error.message;
+            } else {
+                msg.style.color = '#22c55e';
+                msg.textContent = 'Đã gửi link! Vui lòng kiểm tra email của bạn.';
+                setTimeout(() => { msg.textContent = ''; }, 5000);
+            }
+        } catch(err) {
+            msg.style.color = '#ef4444';
+            msg.textContent = 'Có lỗi xảy ra.';
+        }
+    });
+}
+
+// Đăng nhập bằng Google
+var btnGoogle = document.getElementById('btn-google-login');
+if (btnGoogle) {
+    btnGoogle.addEventListener('click', async function(e) {
+        e.preventDefault();
+        var sb = getSupabase();
+        try {
+            var { data, error } = await sb.auth.signInWithOAuth({ provider: 'google' });
+            if (error) {
+                var msg = document.getElementById('auth-msg');
+                msg.style.color = '#ef4444';
+                msg.textContent = error.message;
+            }
+        } catch(err) {
+            var msg = document.getElementById('auth-msg');
+            msg.style.color = '#ef4444';
+            msg.textContent = 'Có lỗi xảy ra.';
+        }
+    });
+}
 
 // Listen trạng thái đăng nhập thay đổi
 getSupabase().auth.onAuthStateChange(function(event, session) {
