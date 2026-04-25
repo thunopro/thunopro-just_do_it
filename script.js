@@ -230,18 +230,7 @@ async function renderAllProblems() {
     document.querySelectorAll('.prob-tag-cb').forEach(function (cb) { cb.addEventListener('change', applyFilter); });
 }
 
-var categoriesHTML = '<div class="cf-content">' +
-    '<p style="font-size:13px;color:#888;margin-bottom:12px;">Thuật toán theo chủ đề</p>' +
-    '<div class="cf-cat-grid">' +
-    '<a href="#/problems" class="cf-cat-card"><div class="cf-cat-lbl">DP</div><div><strong>Dynamic Programming</strong><small>Knapsack, LCS, Bitmask, Tree DP</small></div></a>' +
-    '<a href="#/problems" class="cf-cat-card"><div class="cf-cat-lbl">GR</div><div><strong>Graph Theory</strong><small>BFS/DFS, Dijkstra, Topo Sort, SCC</small></div></a>' +
-    '<a href="#/problems" class="cf-cat-card"><div class="cf-cat-lbl">ST</div><div><strong>Strings</strong><small>KMP, Z-function, Suffix Array</small></div></a>' +
-    '<a href="#/problems" class="cf-cat-card"><div class="cf-cat-lbl">DS</div><div><strong>Data Structures</strong><small>Segment Tree, BIT, DSU</small></div></a>' +
-    '<a href="#/problems" class="cf-cat-card"><div class="cf-cat-lbl">NT</div><div><strong>Number Theory</strong><small>Sieve, GCD, Modular Inverse</small></div></a>' +
-    '<a href="#/problems" class="cf-cat-card"><div class="cf-cat-lbl">TR</div><div><strong>Trees</strong><small>LCA, HLD, Centroid Decomp.</small></div></a>' +
-    '<a href="#/problems" class="cf-cat-card"><div class="cf-cat-lbl">GE</div><div><strong>Geometry</strong><small>Convex Hull, Line Intersection</small></div></a>' +
-    '<a href="#/problems" class="cf-cat-card"><div class="cf-cat-lbl">FL</div><div><strong>Flows</strong><small>Max Flow, Bipartite Matching</small></div></a>' +
-    '</div></div>';
+
 
 // ===== BLOG =====
 async function fetchBlogs() {
@@ -273,9 +262,12 @@ var _activeBlogCat = '';
 
 function buildBlogCards(list) {
     if (!list.length) return '<p class="blog-empty">Chưa có bài nào trong mục này.</p>';
+    var tickedBlogs = JSON.parse(localStorage.getItem('ticked_blogs') || '[]');
     return list.map(function(p) {
-        return '<div class="blog-card">' +
-            '<h2 class="blog-title"><a href="#/blog/' + p.id + '">' + (p.title || '') + '</a></h2>' +
+        var isTicked = tickedBlogs.includes(p.id);
+        var cardClass = isTicked ? 'blog-card ticked' : 'blog-card';
+        return '<div class="' + cardClass + '" data-bid="' + p.id + '" style="cursor: pointer;" title="Bấm để đánh dấu">' +
+            '<h2 class="blog-title" style="margin-bottom:0;"><a href="#/blog/' + p.id + '">' + (p.title || '') + '</a></h2>' +
             '</div>';
     }).join('');
 }
@@ -290,7 +282,7 @@ async function renderBlogList() {
         return;
     }
 
-    var hotPosts = posts.filter(function(p) { return p.hot; });
+
     var mainPosts = posts;
 
     // Sidebar HTML
@@ -300,14 +292,7 @@ async function renderBlogList() {
     sidebarHtml += '<a href="#/blog/new" class="btn-primary" style="width:100%; text-align:center; display:block; padding:8px; font-size:14px;"><i class="fas fa-plus"></i> Viết bài mới</a>';
     sidebarHtml += '</div>';
 
-    if (hotPosts.length) {
-        sidebarHtml += '<div class="blog-sidebar-section">';
-        sidebarHtml += '<div class="blog-sidebar-title">🔥 Nổi bật</div>';
-        hotPosts.forEach(function(p) {
-            sidebarHtml += '<a href="#/blog/' + p.id + '" class="blog-sidebar-link">' + (p.title || '') + '</a>';
-        });
-        sidebarHtml += '</div>';
-    }
+
     sidebarHtml += '</div>';
 
     var html = '<div class="blog-layout">';
@@ -317,6 +302,27 @@ async function renderBlogList() {
     html += sidebarHtml;
     html += '</div>';
     appRoot.innerHTML = html;
+
+    document.querySelectorAll('.blog-card').forEach(function(card) {
+        card.addEventListener('click', function(e) {
+            // Không đổi màu nếu bấm vào link (để chuyển trang)
+            if (e.target.tagName.toLowerCase() === 'a') return;
+
+            var bid = this.dataset.bid;
+            var isChecked = !this.classList.contains('ticked');
+            
+            var tickedBlogs = JSON.parse(localStorage.getItem('ticked_blogs') || '[]');
+            
+            if (isChecked) {
+                this.classList.add('ticked');
+                if (!tickedBlogs.includes(bid)) tickedBlogs.push(bid);
+            } else {
+                this.classList.remove('ticked');
+                tickedBlogs = tickedBlogs.filter(function(id) { return id !== bid; });
+            }
+            localStorage.setItem('ticked_blogs', JSON.stringify(tickedBlogs));
+        });
+    });
 
 }
 
@@ -334,12 +340,78 @@ async function renderBlogDetail(id) {
     html += '<div class="blog-article">';
     html += '<a href="#/blog" class="blog-back">← Blog</a>';
     html += '<p class="blog-article-date">' + formatDate(p.created_at) + '</p>';
+    if (currentUser) {
+        html += '<a href="#/blog/edit/' + p.id + '" style="font-size:13px; color:#3b82f6; text-decoration:none; margin-bottom:16px; display:inline-block;"><i class="fas fa-edit"></i> Sửa bài viết</a>';
+    }
     html += '<h1 class="blog-article-title">' + (p.title || '') + '</h1>';
     html += '<div class="blog-article-divider"></div>';
     html += '<div class="blog-body">' + (p.content || '') + '</div>';
     html += '</div>';
     html += '</div>';
     appRoot.innerHTML = html;
+
+    // Interactive Checkboxes Auto-Save
+    var blogBody = document.querySelector('.blog-body');
+    if (blogBody) {
+        var checkboxes = blogBody.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(function(cb) {
+            cb.addEventListener('change', async function() {
+                // Update attribute for serialization
+                if (this.checked) {
+                    this.setAttribute('checked', 'checked');
+                } else {
+                    this.removeAttribute('checked');
+                }
+                
+                var newContent = blogBody.innerHTML;
+                try {
+                    await fetch(SUPABASE_URL + '/rest/v1/blogs?id=eq.' + p.id, {
+                        method: 'PATCH',
+                        headers: { 
+                            'apikey': SUPABASE_KEY, 
+                            'Authorization': 'Bearer ' + SUPABASE_KEY,
+                            'Content-Type': 'application/json',
+                            'Prefer': 'return=minimal'
+                        },
+                        body: JSON.stringify({ content: newContent })
+                    });
+                } catch(e) {
+                    console.error("Auto-save failed", e);
+                }
+            });
+        });
+    }
+}
+
+// Custom Quill Checkbox Blot
+var Embed = Quill.import('blots/embed');
+class CheckboxBlot extends Embed {
+    static create(value) {
+        let node = super.create();
+        node.setAttribute('type', 'checkbox');
+        node.style.width = '18px';
+        node.style.height = '18px';
+        node.style.marginRight = '8px';
+        node.style.verticalAlign = 'middle';
+        node.style.cursor = 'pointer';
+        
+        // Sync attribute for innerHTML serialization
+        node.addEventListener('change', function() {
+            if (this.checked) {
+                this.setAttribute('checked', 'checked');
+            } else {
+                this.removeAttribute('checked');
+            }
+        });
+        return node;
+    }
+}
+CheckboxBlot.blotName = 'checkbox';
+CheckboxBlot.tagName = 'input';
+Quill.register(CheckboxBlot);
+
+if (typeof window.quillMagicUrl !== 'undefined') {
+    Quill.register('modules/magicUrl', window.quillMagicUrl.default || window.quillMagicUrl);
 }
 
 async function renderNewBlogForm() {
@@ -352,7 +424,7 @@ async function renderNewBlogForm() {
     
     html += '<div>';
     html += '<label style="font-weight:600; margin-bottom:8px; display:block;">Tiêu đề</label>';
-    html += '<input type="text" id="nb-title" required class="modal-input" placeholder="Ví dụ: Kỷ luật bản thân là chìa khóa...">';
+    html += '<input type="text" id="nb-title" required class="modal-input" placeholder="không có việc gì khó">';
     html += '</div>';
 
 
@@ -378,8 +450,9 @@ async function renderNewBlogForm() {
     // Khởi tạo Quill Editor
     var quill = new Quill('#nb-editor-container', {
         theme: 'snow',
-        placeholder: 'Bắt đầu viết nội dung bài blog...',
+        placeholder: 'chỉ sợ lòng không bền',
         modules: {
+            magicUrl: true,
             toolbar: [
                 [{ 'header': [1, 2, 3, false] }],
                 ['bold', 'italic', 'underline', 'strike', 'blockquote', 'code-block'],
@@ -387,6 +460,24 @@ async function renderNewBlogForm() {
                 ['link', 'image', 'video'],
                 ['clean']
             ]
+        }
+    });
+
+    quill.on('text-change', function(delta, oldDelta, source) {
+        if (source === 'user') {
+            var range = quill.getSelection();
+            if (range && range.index >= 6) {
+                var textBefore = quill.getText(range.index - 6, 6);
+                if (textBefore === '!check') {
+                    var cursorIdx = range.index;
+                    setTimeout(function() {
+                        quill.deleteText(cursorIdx - 6, 6, 'api');
+                        quill.insertEmbed(cursorIdx - 6, 'checkbox', true, 'api');
+                        quill.insertText(cursorIdx - 5, ' ', 'api');
+                        quill.setSelection(cursorIdx - 4, 'api');
+                    }, 10);
+                }
+            }
         }
     });
 
@@ -447,6 +538,132 @@ async function renderNewBlogForm() {
     });
 }
 
+async function renderEditBlogForm(id) {
+    var appRoot = document.getElementById('app-root');
+    appRoot.innerHTML = '<div class="cf-content"><div class="cf-loading">Đang tải...</div></div>';
+    var p = await fetchBlogById(id);
+
+    if (!p) {
+        appRoot.innerHTML = '<div class="cf-content"><p>Không tìm thấy bài.</p><a href="#/blog">← Quay lại</a></div>';
+        return;
+    }
+
+    var html = '<div class="blog-article-wrap"><div class="blog-article">';
+    html += '<a href="#/blog/' + p.id + '" class="blog-back">← Hủy</a>';
+    html += '<h1 class="blog-article-title">Sửa bài viết</h1>';
+    
+    html += '<form id="edit-blog-form" style="display:flex; flex-direction:column; gap:16px;">';
+    
+    html += '<div>';
+    html += '<label style="font-weight:600; margin-bottom:8px; display:block;">Tiêu đề</label>';
+    var safeTitle = (p.title || '').replace(/"/g, '&quot;');
+    html += '<input type="text" id="eb-title" required class="modal-input" value="' + safeTitle + '">';
+    html += '</div>';
+
+    html += '<div>';
+    html += '<label style="font-weight:600; margin-bottom:8px; display:block;">Nội dung</label>';
+    html += '<div id="eb-editor-container" style="background: var(--bg); font-family: inherit;">' + (p.content || '') + '</div>';
+    html += '</div>';
+
+    html += '<div style="display:flex; align-items:center; gap: 16px; margin-top: 10px;">';
+    html += '<button type="submit" id="eb-submit" class="btn-primary" style="padding: 10px 24px;">Lưu thay đổi</button>';
+    if (!currentUser) {
+        html += '<span style="color:#ef4444; font-size:13px;">Bạn cần đăng nhập để lưu.</span>';
+    }
+    html += '</div>';
+    html += '<p id="eb-msg" style="color:red; font-size:13px;"></p>';
+
+    html += '</form>';
+    html += '</div></div>';
+    
+    appRoot.innerHTML = html;
+
+    var quill = new Quill('#eb-editor-container', {
+        theme: 'snow',
+        placeholder: 'chỉ sợ lòng không bền',
+        modules: {
+            magicUrl: true,
+            toolbar: [
+                [{ 'header': [1, 2, 3, false] }],
+                ['bold', 'italic', 'underline', 'strike', 'blockquote', 'code-block'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                ['link', 'image', 'video'],
+                ['clean']
+            ]
+        }
+    });
+
+    quill.on('text-change', function(delta, oldDelta, source) {
+        if (source === 'user') {
+            var range = quill.getSelection();
+            if (range && range.index >= 6) {
+                var textBefore = quill.getText(range.index - 6, 6);
+                if (textBefore === '!check') {
+                    var cursorIdx = range.index;
+                    setTimeout(function() {
+                        quill.deleteText(cursorIdx - 6, 6, 'api');
+                        quill.insertEmbed(cursorIdx - 6, 'checkbox', true, 'api');
+                        quill.insertText(cursorIdx - 5, ' ', 'api');
+                        quill.setSelection(cursorIdx - 4, 'api');
+                    }, 10);
+                }
+            }
+        }
+    });
+
+    document.getElementById('edit-blog-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        if (!currentUser) {
+            alert("Bạn cần đăng nhập để sửa bài!");
+            return;
+        }
+
+        var title = document.getElementById('eb-title').value.trim();
+        var content = quill.root.innerHTML.trim();
+        if (content === '<p><br></p>') content = '';
+        var msg = document.getElementById('eb-msg');
+        var btn = document.getElementById('eb-submit');
+
+        if (!title) { msg.textContent = "Vui lòng nhập tiêu đề."; return; }
+        if (!content) { msg.textContent = "Vui lòng nhập nội dung."; return; }
+
+        btn.disabled = true;
+        btn.textContent = 'Đang lưu...';
+
+        var updateData = {
+            title: title,
+            content: content
+        };
+
+        try {
+            var res = await fetch(SUPABASE_URL + '/rest/v1/blogs?id=eq.' + p.id, {
+                method: 'PATCH',
+                headers: { 
+                    'apikey': SUPABASE_KEY, 
+                    'Authorization': 'Bearer ' + SUPABASE_KEY,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify(updateData)
+            });
+
+            if (!res.ok) {
+                var err = await res.json();
+                msg.textContent = 'Lỗi: ' + (err.message || res.status);
+                btn.disabled = false;
+                btn.textContent = 'Lưu thay đổi';
+            } else {
+                window.location.hash = '#/blog/' + p.id;
+                setTimeout(function() { window.location.reload(); }, 100);
+            }
+        } catch (err) {
+            msg.textContent = 'Lỗi mạng: ' + err.message;
+            btn.disabled = false;
+            btn.textContent = 'Lưu thay đổi';
+        }
+    });
+}
+
 // ===== ROUTER =====
 async function router() {
     var path = window.location.hash.slice(1) || '/';
@@ -458,14 +675,16 @@ async function router() {
         await renderTodayPage();
     } else if (path === '/problems') {
         await renderAllProblems();
-    } else if (path === '/categories') {
-        appRoot.innerHTML = categoriesHTML;
+
     } else if (path === '/blog') {
         await renderBlogList();
     } else if (path === '/blog/new') {
         await renderNewBlogForm();
+    } else if (path.startsWith('/blog/edit/')) {
+        var bid = path.slice('/blog/edit/'.length);
+        await renderEditBlogForm(bid);
     } else if (path.startsWith('/blog/')) {
-        var bid = path.slice('/blog/new'.length === path.length ? 0 : '/blog/'.length); // Safe check
+        var bid = path.slice('/blog/'.length);
         await renderBlogDetail(bid);
     } else if (path.startsWith('/problem/')) {
         var id = path.slice('/problem/'.length);
@@ -477,7 +696,7 @@ async function router() {
     document.querySelectorAll('.menu-list a').forEach(function (el) { el.classList.remove('active'); });
     if (path === '/') { var n = document.getElementById('nav-today'); if (n) n.classList.add('active'); }
     if (path === '/problems') { var n = document.getElementById('nav-problems'); if (n) n.classList.add('active'); }
-    if (path === '/categories') { var n = document.getElementById('nav-categories'); if (n) n.classList.add('active'); }
+
     if (path === '/blog' || path.startsWith('/blog/')) { var n = document.getElementById('nav-blog'); if (n) n.classList.add('active'); }
 }
 
