@@ -340,9 +340,7 @@ async function renderBlogDetail(id) {
     html += '<div class="blog-article">';
     html += '<a href="#/blog" class="blog-back">← Blog</a>';
     html += '<p class="blog-article-date">' + formatDate(p.created_at) + '</p>';
-    if (currentUser) {
-        html += '<a href="#/blog/edit/' + p.id + '" style="font-size:13px; color:#3b82f6; text-decoration:none; margin-bottom:16px; display:inline-block;"><i class="fas fa-edit"></i> Sửa bài viết</a>';
-    }
+    html += '<a href="#/blog/edit/' + p.id + '" style="font-size:13px; color:#3b82f6; text-decoration:none; margin-bottom:16px; display:inline-block;"><i class="fas fa-edit"></i> Sửa bài viết</a>';
     html += '<h1 class="blog-article-title">' + (p.title || '') + '</h1>';
     html += '<div class="blog-article-divider"></div>';
     html += '<div class="blog-body">' + (p.content || '') + '</div>';
@@ -436,9 +434,6 @@ async function renderNewBlogForm() {
 
     html += '<div style="display:flex; align-items:center; gap: 16px; margin-top: 10px;">';
     html += '<button type="submit" id="nb-submit" class="btn-primary" style="padding: 10px 24px;">Đăng bài</button>';
-    if (!currentUser) {
-        html += '<span style="color:#ef4444; font-size:13px;">Bạn cần đăng nhập để có thể đăng bài.</span>';
-    }
     html += '</div>';
     html += '<p id="nb-msg" style="color:red; font-size:13px;"></p>';
 
@@ -483,10 +478,6 @@ async function renderNewBlogForm() {
 
     document.getElementById('new-blog-form').addEventListener('submit', async function(e) {
         e.preventDefault();
-        if (!currentUser) {
-            alert("Bạn cần đăng nhập để đăng bài!");
-            return;
-        }
 
         var title = document.getElementById('nb-title').value.trim();
 
@@ -567,9 +558,6 @@ async function renderEditBlogForm(id) {
 
     html += '<div style="display:flex; align-items:center; gap: 16px; margin-top: 10px;">';
     html += '<button type="submit" id="eb-submit" class="btn-primary" style="padding: 10px 24px;">Lưu thay đổi</button>';
-    if (!currentUser) {
-        html += '<span style="color:#ef4444; font-size:13px;">Bạn cần đăng nhập để lưu.</span>';
-    }
     html += '</div>';
     html += '<p id="eb-msg" style="color:red; font-size:13px;"></p>';
 
@@ -613,10 +601,6 @@ async function renderEditBlogForm(id) {
 
     document.getElementById('edit-blog-form').addEventListener('submit', async function(e) {
         e.preventDefault();
-        if (!currentUser) {
-            alert("Bạn cần đăng nhập để sửa bài!");
-            return;
-        }
 
         var title = document.getElementById('eb-title').value.trim();
         var content = quill.root.innerHTML.trim();
@@ -667,6 +651,12 @@ async function renderEditBlogForm(id) {
 // ===== ROUTER =====
 async function router() {
     var path = window.location.hash.slice(1) || '/';
+    
+    // Bỏ qua hash của Supabase Auth Callback để tránh bị lỗi 404
+    if (path.includes('access_token=') || path.includes('type=recovery') || path.includes('error=')) {
+        path = '/';
+    }
+
     var appRoot = document.getElementById('app-root');
     appRoot.className = '';
     appRoot.style = '';
