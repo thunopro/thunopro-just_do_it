@@ -856,7 +856,13 @@ async function handleAuthSubmit(e) {
     try {
         var result;
         if (authIsRegister) {
-            result = await sb.auth.signUp({ email: email, password: pass });
+            result = await sb.auth.signUp({ 
+                email: email, 
+                password: pass,
+                options: {
+                    emailRedirectTo: window.location.origin + '/'
+                }
+            });
         } else {
             result = await sb.auth.signInWithPassword({ email: email, password: pass });
         }
@@ -915,7 +921,12 @@ if (btnGoogle) {
         e.preventDefault();
         var sb = getSupabase();
         try {
-            var { data, error } = await sb.auth.signInWithOAuth({ provider: 'google' });
+            var { data, error } = await sb.auth.signInWithOAuth({ 
+                provider: 'google',
+                options: {
+                    redirectTo: window.location.origin + '/'
+                }
+            });
             if (error) {
                 var msg = document.getElementById('auth-msg');
                 msg.style.color = '#ef4444';
