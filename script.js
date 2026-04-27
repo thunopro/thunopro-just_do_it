@@ -134,9 +134,8 @@ async function renderProblemDetail(id) {
 var _allProblemsCache = [];
 
 function buildProblemsTable(list) {
-    if (!list.length) return '<tr><td colspan="6" style="padding:20px;color:#888;">Không tìm thấy bài nào.</td></tr>';
+    if (!list.length) return '<tr><td colspan="4" style="padding:20px;color:#888;">Không tìm thấy bài nào.</td></tr>';
     return list.map(function (p) {
-        var tagsHtml = (p.tags || []).map(function (t) { return '<span class="cf-tag">' + t + '</span>'; }).join(' ');
         var isDone = completedProblems.has(p.id);
         var doneCell = isDone
             ? '<td style="text-align:center;"><span style="color:#22c55e;font-size:16px;font-weight:700;">✓</span></td>'
@@ -145,8 +144,6 @@ function buildProblemsTable(list) {
             doneCell +
             '<td class="cf-td-id">' + (p.id || '') + '</td>' +
             '<td><a href="#/problem/' + p.id + '" class="cf-table-link">' + (p.title || '') + '</a></td>' +
-            '<td><div class="cf-tags">' + (tagsHtml || '<span style="color:#ccc">—</span>') + '</div></td>' +
-            '<td class="cf-td-diff">' + (p.difficulty || '—') + '</td>' +
             '<td class="cf-td-src">' + (p.source || '–') + '</td>' +
             '</tr>';
     }).join('');
@@ -157,19 +154,6 @@ async function renderAllProblems() {
     appRoot.innerHTML = '<div class="cf-problems-layout"><div class="cf-loading">Đang tải...</div></div>';
     _allProblemsCache = await fetchProblems();
 
-    // Collect all unique tags
-    var allTags = [];
-    _allProblemsCache.forEach(function (p) {
-        (p.tags || []).forEach(function (t) {
-            if (!allTags.includes(t)) allTags.push(t);
-        });
-    });
-
-    // Build sidebar HTML
-    var sidebarTags = allTags.map(function (t) {
-        return '<label class="cf-filter-tag"><input type="checkbox" value="' + t + '" class="prob-tag-cb"> ' + t + '</label>';
-    }).join('');
-
     var html = '<div class="cf-problems-layout">';
 
     // LEFT: table
@@ -178,56 +162,27 @@ async function renderAllProblems() {
     html += '<input type="text" id="prob-search" placeholder="Tìm bài..." autocomplete="off">';
     html += '</div>';
     html += '<table class="cf-table"><thead><tr>';
-    html += '<th style="width:36px;text-align:center;">✓</th><th style="width:90px">#</th><th>Tên bài</th><th>Tags</th><th style="width:80px">Độ khó</th><th style="width:130px">Nguồn</th>';
+    html += '<th style="width:36px;text-align:center;">✓</th><th style="width:90px">#</th><th>Tên bài</th><th style="width:130px">Nguồn</th>';
     html += '</tr></thead><tbody id="prob-tbody">';
     html += buildProblemsTable(_allProblemsCache);
     html += '</tbody></table>';
     html += '</div>'; // end main
-
-    // RIGHT: sidebar filter
-    html += '<div class="cf-problems-sidebar">';
-    html += '<div class="cf-filter-box">';
-    html += '<div class="cf-filter-title">Độ khó</div>';
-    html += '<select id="prob-diff-filter" class="cf-filter-select">';
-    html += '<option value="">Tất cả</option>';
-    html += '<option value="easy">≤ 1600</option>';
-    html += '<option value="mid">1601 – 2199</option>';
-    html += '<option value="hard">≥ 2200</option>';
-    html += '</select>';
-    html += '</div>';
-    if (sidebarTags) {
-        html += '<div class="cf-filter-box">';
-        html += '<div class="cf-filter-title">Tags</div>';
-        html += '<div class="cf-filter-tags">' + sidebarTags + '</div>';
-        html += '</div>';
-    }
-    html += '</div>'; // end sidebar
 
     html += '</div>'; // end layout
     appRoot.innerHTML = html;
 
     function applyFilter() {
         var q = (document.getElementById('prob-search').value || '').toLowerCase();
-        var diff = document.getElementById('prob-diff-filter').value;
-        var checkedTags = Array.from(document.querySelectorAll('.prob-tag-cb:checked')).map(function (el) { return el.value; });
         var filtered = _allProblemsCache.filter(function (p) {
             var matchQ = !q ||
                 (p.title || '').toLowerCase().includes(q) ||
                 (p.id || '').toLowerCase().includes(q) ||
                 (p.source || '').toLowerCase().includes(q);
-            var d = parseInt(p.difficulty) || 0;
-            var matchD = !diff ||
-                (diff === 'easy' && d <= 1600) ||
-                (diff === 'mid' && d > 1600 && d < 2200) ||
-                (diff === 'hard' && d >= 2200);
-            var matchT = !checkedTags.length || checkedTags.every(function (t) { return (p.tags || []).includes(t); });
-            return matchQ && matchD && matchT;
+            return matchQ;
         });
         document.getElementById('prob-tbody').innerHTML = buildProblemsTable(filtered);
     }
     document.getElementById('prob-search').addEventListener('input', applyFilter);
-    document.getElementById('prob-diff-filter').addEventListener('change', applyFilter);
-    document.querySelectorAll('.prob-tag-cb').forEach(function (cb) { cb.addEventListener('change', applyFilter); });
 }
 
 
