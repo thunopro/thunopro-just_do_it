@@ -5,7 +5,7 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 async function fetchProblems() {
     try {
-        const res = await fetch(SUPABASE_URL + '/rest/v1/problems?select=*&order=created_at.desc', {
+        const res = await fetch(SUPABASE_URL + '/rest/v1/cs_problems?select=*&order=created_at.desc', {
             headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
         });
         if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -18,7 +18,7 @@ async function fetchProblems() {
 
 async function fetchProblemById(id) {
     try {
-        const res = await fetch(SUPABASE_URL + '/rest/v1/problems?id=eq.' + encodeURIComponent(id) + '&select=*', {
+        const res = await fetch(SUPABASE_URL + '/rest/v1/cs_problems?id=eq.' + encodeURIComponent(id) + '&select=*', {
             headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
         });
         const data = await res.json();
@@ -603,6 +603,154 @@ async function renderEditBlogForm(id) {
     });
 }
 
+// ===== MATH =====
+async function fetchMathProblems(subcategory) {
+    try {
+        let url = SUPABASE_URL + '/rest/v1/math_problems?select=*&order=created_at.desc';
+        if (subcategory) {
+            url += '&subcategory=eq.' + encodeURIComponent(subcategory);
+        }
+        const res = await fetch(url, {
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return await res.json();
+    } catch (e) {
+        console.error('fetchMathProblems error:', e);
+        return [];
+    }
+}
+
+async function fetchMathProblemById(id) {
+    try {
+        const res = await fetch(SUPABASE_URL + '/rest/v1/math_problems?id=eq.' + encodeURIComponent(id) + '&select=*', {
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+        });
+        const data = await res.json();
+        return data[0] || null;
+    } catch (e) { return null; }
+}
+
+async function renderMathCategories() {
+    const appRoot = document.getElementById('app-root');
+    let html = '<div class="cf-content" style="max-width: 1000px; margin: 0 auto; padding-top: 40px;">';
+    html += '<h2 style="margin-bottom: 24px; font-size: 28px; font-weight: 800;">Chuyên đề Toán học</h2>';
+    html += '<div class="cf-cat-grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; background: transparent; border: none;">';
+    
+    html += '<a href="#/math/list/vao_10" class="cf-cat-card" style="border: 1px solid var(--border); border-radius: var(--radius); padding: 24px;">';
+    html += '<div class="cf-cat-lbl" style="width: 48px; height: 48px; font-size: 20px;"><i class="fas fa-graduation-cap"></i></div>';
+    html += '<div><strong style="font-size: 18px;">Bài tập vào 10</strong><small>Tuyển tập đề thi môn Toán vào lớp 10</small></div>';
+    html += '</a>';
+
+    html += '</div></div>';
+    appRoot.innerHTML = html;
+}
+
+function buildMathProblemsTable(list) {
+    if (!list || !list.length) {
+        return '<p style="color: var(--text-muted);">Chưa có bài tập nào thỏa mãn.</p>';
+    }
+    var html = '<table class="cf-table"><thead><tr>';
+    html += '<th style="width:36px;text-align:center;">✓</th><th style="width:120px">Mã bài</th><th>Tên bài</th><th style="width:150px">Nguồn</th>';
+    html += '</tr></thead><tbody>';
+    html += list.map(function(p) {
+        return '<tr>' +
+            '<td style="text-align:center;"><span style="color:var(--border);font-size:14px;">○</span></td>' +
+            '<td class="cf-td-id">' + (p.id || '') + '</td>' +
+            '<td><a href="#/math/problem/' + p.id + '" class="cf-table-link">' + (p.title || '') + '</a></td>' +
+            '<td class="cf-td-src">' + (p.source || '–') + '</td>' +
+            '</tr>';
+    }).join('');
+    html += '</tbody></table>';
+    return html;
+}
+
+async function renderMathProblemList(subcategory) {
+    const appRoot = document.getElementById('app-root');
+    appRoot.innerHTML = '<div class="cf-problems-layout"><div class="cf-loading">Đang tải...</div></div>';
+    
+    const problems = await fetchMathProblems(subcategory);
+    
+    let title = "Danh sách bài tập";
+    if (subcategory === 'vao_10') title = "Tuyển tập Bài tập vào 10";
+
+    var html = '<div class="cf-problems-layout">';
+    html += '<div style="margin-bottom: 20px;">';
+    html += '<a href="#/math" class="cf-back-link">← Quay lại Chuyên đề</a>';
+    html += '<h2 style="margin-top: 12px; font-size: 24px; font-weight: 800;">' + title + '</h2>';
+    
+    if (subcategory === 'vao_10') {
+        html += '<div style="margin-top: 12px; display: flex; gap: 8px;" id="math-tags-filter">';
+        html += '<button class="btn-outline math-filter-btn" style="border-color: var(--text);" data-tag="all">Tất cả</button>';
+        html += '<button class="btn-outline math-filter-btn" data-tag="Hình học">Hình học</button>';
+        html += '<button class="btn-outline math-filter-btn" data-tag="Bất đẳng thức">Bất đẳng thức</button>';
+        html += '<button class="btn-outline math-filter-btn" data-tag="Other">Other</button>';
+        html += '</div>';
+    }
+    html += '</div>';
+
+    html += '<div class="cf-problems-main" id="math-prob-list-container">';
+    html += buildMathProblemsTable(problems);
+    html += '</div></div>';
+    appRoot.innerHTML = html;
+
+    if (subcategory === 'vao_10') {
+        const filterBtns = document.querySelectorAll('.math-filter-btn');
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                filterBtns.forEach(b => b.style.borderColor = 'var(--border)');
+                this.style.borderColor = 'var(--text)';
+                const tag = this.dataset.tag;
+                if (tag === 'all') {
+                    document.getElementById('math-prob-list-container').innerHTML = buildMathProblemsTable(problems);
+                } else {
+                    const filtered = problems.filter(p => p.tags && p.tags.includes(tag));
+                    document.getElementById('math-prob-list-container').innerHTML = buildMathProblemsTable(filtered);
+                }
+            });
+        });
+    }
+}
+
+async function renderMathProblemDetail(id) {
+    const appRoot = document.getElementById('app-root');
+    appRoot.innerHTML = '<div class="cf-content"><div class="cf-loading">Đang tải bài ' + id + '...</div></div>';
+
+    var p = await fetchMathProblemById(id);
+    if (!p) {
+        appRoot.innerHTML = '<div class="cf-content"><div class="cf-problem-block"><p>Không tìm thấy bài <strong>' + id + '</strong>.</p><a href="#/math" class="cf-back-link">← Quay lại</a></div></div>';
+        return;
+    }
+
+    var html = '<div class="cf-content">';
+    html += '<div class="cf-problem-block">';
+    // Title bar
+    html += '<div class="cf-problem-title-bar">';
+    html += '<a class="cf-back-link" href="#/math/list/' + (p.subcategory || 'vao_10') + '">←</a>';
+    html += '<span class="cf-prob-title cf-prob-title-large">' + (p.title || p.id) + '</span>';
+    if (p.source_url) {
+        html += '<a class="cf-prob-source" href="' + p.source_url + '" target="_blank">' + (p.source || 'Source') + ' ↗</a>';
+    } else if (p.source) {
+        html += '<span class="cf-prob-source">' + p.source + '</span>';
+    }
+    html += '</div>';
+
+    // Summary section
+    html += '<div class="cf-section-label">Tóm tắt đề bài</div>';
+    html += '<div class="cf-statement">';
+    html += renderLatex(p.summary || '');
+    html += '</div>';
+
+    // Analysis section
+    html += '<div class="cf-section-label cf-section-analysis">Phân tích & Giải thuật</div>';
+    html += '<div class="cf-statement cf-analysis-body">';
+    html += renderLatex(p.analysis_and_solution || '');
+    html += '</div>';
+
+    html += '</div></div>';
+    appRoot.innerHTML = html;
+}
+
 // ===== ROUTER =====
 async function router() {
     var path = window.location.hash.slice(1) || '/';
@@ -634,6 +782,14 @@ async function router() {
     } else if (path.startsWith('/problem/')) {
         var id = path.slice('/problem/'.length);
         await renderProblemDetail(id);
+    } else if (path === '/math') {
+        await renderMathCategories();
+    } else if (path.startsWith('/math/list/')) {
+        var subcategory = path.slice('/math/list/'.length);
+        await renderMathProblemList(subcategory);
+    } else if (path.startsWith('/math/problem/')) {
+        var id = path.slice('/math/problem/'.length);
+        await renderMathProblemDetail(id);
     } else {
         appRoot.innerHTML = '<div class="cf-page"><h1 style="font-size:60px;color:#ddd;text-align:center;padding:80px 0;">404</h1></div>';
     }
@@ -641,6 +797,7 @@ async function router() {
     document.querySelectorAll('.menu-list a').forEach(function (el) { el.classList.remove('active'); });
     if (path === '/') { var n = document.getElementById('nav-today'); if (n) n.classList.add('active'); }
     if (path === '/problems') { var n = document.getElementById('nav-problems'); if (n) n.classList.add('active'); }
+    if (path.startsWith('/math')) { var n = document.getElementById('nav-math'); if (n) n.classList.add('active'); }
 
     if (path === '/blog' || path.startsWith('/blog/')) { var n = document.getElementById('nav-blog'); if (n) n.classList.add('active'); }
 }

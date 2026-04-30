@@ -51,7 +51,7 @@ async function pushToDatabase() {
 
   console.log("Đang đẩy bài toán lên Supabase...");
   const { data, error } = await supabase
-    .from('problems')
+    .from('cs_problems')
     .insert([newProblem]);
 
   if (error) {
