@@ -654,10 +654,15 @@ function buildMathProblemsTable(list) {
     html += '<th style="width:36px;text-align:center;">✓</th><th style="width:120px">Mã bài</th><th>Tên bài</th><th style="width:150px">Nguồn</th>';
     html += '</tr></thead><tbody>';
     html += list.map(function(p) {
+        var isDone = completedProblems.has(p.id);
+        var checkIcon = isDone 
+            ? '<i class="fas fa-check-circle" style="color:#22c55e; font-size:16px;" title="Đã nộp bài"></i>' 
+            : '<i class="far fa-circle" style="color:var(--border); font-size:16px;" title="Chưa nộp bài"></i>';
+
         return '<tr>' +
-            '<td style="text-align:center;"><span style="color:var(--border);font-size:14px;">○</span></td>' +
+            '<td style="text-align:center;">' + checkIcon + '</td>' +
             '<td class="cf-td-id">' + (p.id || '') + '</td>' +
-            '<td><a href="#/math/problem/' + p.id + '" class="cf-table-link">' + (p.title || '') + '</a></td>' +
+            '<td><a href="#/math/problem/' + p.id + '" class="cf-table-link' + (isDone ? ' math-done-link' : '') + '">' + (p.title || '') + '</a></td>' +
             '<td class="cf-td-src">' + (p.source || '–') + '</td>' +
             '</tr>';
     }).join('');
@@ -712,6 +717,27 @@ async function renderMathProblemList(subcategory) {
     }
 }
 
+function compressImage(file) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let w = img.width, h = img.height;
+                const maxW = 400; // Độ phân giải cực thấp
+                if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+                canvas.width = w; canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                resolve(canvas.toDataURL('image/jpeg', 0.4)); // Chất lượng thấp
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
 async function renderMathProblemDetail(id) {
     const appRoot = document.getElementById('app-root');
     appRoot.innerHTML = '<div class="cf-content"><div class="cf-loading">Đang tải bài ' + id + '...</div></div>';
@@ -722,16 +748,22 @@ async function renderMathProblemDetail(id) {
         return;
     }
 
+    var isSolved = completedProblems.has(id);
+    var statusHtml = isSolved 
+        ? '<span id="math-status-badge" style="background:#22c55e; color:white; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold; margin-left:12px; display:inline-block; vertical-align:middle;">SOLVED</span>' 
+        : '<span id="math-status-badge" style="background:#ef4444; color:white; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold; margin-left:12px; display:inline-block; vertical-align:middle;">NOT SOLVED</span>';
+
     var html = '<div class="cf-content">';
     html += '<div class="cf-problem-block">';
     // Title bar
     html += '<div class="cf-problem-title-bar">';
     html += '<a class="cf-back-link" href="#/math/list/' + (p.subcategory || 'vao_10') + '">←</a>';
-    html += '<span class="cf-prob-title cf-prob-title-large">' + (p.title || p.id) + '</span>';
+    html += '<span class="cf-prob-title cf-prob-title-large" style="display:flex; align-items:center;">' + (p.title || p.id) + statusHtml + '</span>';
+    
     if (p.source_url) {
-        html += '<a class="cf-prob-source" href="' + p.source_url + '" target="_blank">' + (p.source || 'Source') + ' ↗</a>';
+        html += '<a class="cf-prob-source" style="margin-left:auto;" href="' + p.source_url + '" target="_blank">' + (p.source || 'Source') + ' ↗</a>';
     } else if (p.source) {
-        html += '<span class="cf-prob-source">' + p.source + '</span>';
+        html += '<span class="cf-prob-source" style="margin-left:auto;">' + p.source + '</span>';
     }
     html += '</div>';
 
@@ -747,8 +779,187 @@ async function renderMathProblemDetail(id) {
     html += renderLatex(p.analysis_and_solution || '');
     html += '</div>';
 
+    // Submit section
+    html += '<div class="cf-section-label" style="background: var(--surface); color: var(--text);">Nộp bài làm</div>';
+    html += '<div class="cf-statement" style="background: var(--bg); border-top: 1px solid var(--border); padding-bottom: 30px;">';
+    
+    html += '<div id="submit-area" style="text-align: center; padding: 20px; border: 2px dashed var(--border); border-radius: var(--radius);">';
+    html += '  <input type="file" id="solution-files" multiple accept="image/*" style="display:none;">';
+    html += '  <button id="btn-select-files" class="btn-outline" style="margin-bottom: 16px;"><i class="fas fa-image" style="margin-right:6px;"></i> Tải ảnh bài làm lên</button>';
+    html += '  <div id="preview-area" style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-bottom: 16px;"></div>';
+    html += '  <button id="btn-submit-solution" class="btn-primary" style="display:none; margin: 0 auto;"><i class="fas fa-paper-plane" style="margin-right:6px;"></i> Gửi bài</button>';
+    html += '  <p id="submit-msg" style="margin-top: 10px; font-size: 14px; font-weight: 500;"></p>';
+    html += '</div>';
+
+    html += '</div>';
+
     html += '</div></div>';
     appRoot.innerHTML = html;
+
+    // Logic for submitting
+    var fileInput = document.getElementById('solution-files');
+    var btnSelect = document.getElementById('btn-select-files');
+    var btnSubmit = document.getElementById('btn-submit-solution');
+    var previewArea = document.getElementById('preview-area');
+    var submitMsg = document.getElementById('submit-msg');
+    var currentImagesBase64 = [];
+    
+    // Khởi tạo Modal xem ảnh
+    let imgModal = document.getElementById('img-viewer-modal');
+    if (!imgModal) {
+        let m = document.createElement('div');
+        m.id = 'img-viewer-modal';
+        m.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center;';
+        m.innerHTML = '<img id="img-viewer-content" style="max-width:90%; max-height:90%; border-radius:8px; box-shadow:0 0 20px rgba(0,0,0,0.5);"><div style="position:absolute; top:20px; right:30px; color:white; font-size:40px; cursor:pointer;" onclick="document.getElementById(\'img-viewer-modal\').style.display=\'none\'">&times;</div>';
+        
+        // Bấm ra ngoài ảnh để đóng
+        m.addEventListener('click', function(e) {
+            if(e.target === m) m.style.display = 'none';
+        });
+        
+        document.body.appendChild(m);
+        imgModal = m;
+    }
+
+    function renderPreviews() {
+        previewArea.innerHTML = '';
+        currentImagesBase64.forEach((src, index) => {
+            let wrap = document.createElement('div');
+            wrap.style.cssText = 'position:relative; display:inline-block;';
+
+            let img = document.createElement('img');
+            img.src = src;
+            img.style.cssText = 'height:120px; width:120px; object-fit:cover; border-radius:8px; border:1px solid var(--border); box-shadow:var(--shadow-sm); cursor:pointer;';
+            img.onclick = () => {
+                document.getElementById('img-viewer-content').src = src;
+                document.getElementById('img-viewer-modal').style.display = 'flex';
+            };
+
+            let delBtn = document.createElement('button');
+            delBtn.innerHTML = '&times;';
+            delBtn.title = "Xóa ảnh";
+            delBtn.style.cssText = 'position:absolute; top:-6px; right:-6px; background:#ef4444; color:white; border:none; border-radius:50%; width:22px; height:22px; font-size:16px; font-weight:bold; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding-bottom:2px; box-shadow:0 2px 4px rgba(0,0,0,0.2);';
+            delBtn.onclick = () => {
+                currentImagesBase64.splice(index, 1);
+                renderPreviews();
+                btnSubmit.style.display = 'inline-flex';
+                btnSubmit.innerHTML = '<i class="fas fa-save" style="margin-right:6px;"></i> Lưu thay đổi';
+                submitMsg.textContent = 'Có thay đổi chưa lưu.';
+                submitMsg.style.color = '#eab308'; // Vàng warning
+            };
+
+            wrap.appendChild(img);
+            wrap.appendChild(delBtn);
+            previewArea.appendChild(wrap);
+        });
+
+        if (currentImagesBase64.length === 0) {
+            btnSelect.innerHTML = '<i class="fas fa-image" style="margin-right:6px;"></i> Tải ảnh bài làm lên';
+        } else {
+            btnSelect.innerHTML = '<i class="fas fa-plus" style="margin-right:6px;"></i> Thêm ảnh';
+        }
+    }
+
+    // Tải ảnh cũ từ Supabase nếu đã nộp
+    if (currentUser && isSolved) {
+        try {
+            const sb = getSupabase();
+            const { data, error } = await sb.from('user_problems')
+                .select('solution_images')
+                .eq('user_id', currentUser.id)
+                .eq('problem_id', id)
+                .single();
+            
+            if (data && data.solution_images && data.solution_images.length > 0) {
+                currentImagesBase64 = data.solution_images;
+                renderPreviews();
+            }
+        } catch(e) {
+            console.error('Lỗi khi tải ảnh cũ từ Supabase', e);
+        }
+    }
+
+    btnSelect.addEventListener('click', function() {
+        if (!currentUser) {
+            openAuthModal(false);
+            return;
+        }
+        fileInput.click();
+    });
+
+    fileInput.addEventListener('change', async function() {
+        var files = fileInput.files;
+        var MAX_IMAGES = 3; // Giới hạn số lượng ảnh
+        
+        if (files.length > 0) {
+            // Kiểm tra tổng số ảnh sau khi thêm có vượt quá giới hạn không
+            if (currentImagesBase64.length + files.length > MAX_IMAGES) {
+                alert(`Bạn chỉ được nộp tối đa ${MAX_IMAGES} ảnh cho mỗi bài! Vui lòng xóa bớt ảnh cũ hoặc chọn ít file hơn.`);
+                fileInput.value = ''; // Reset input
+                return;
+            }
+
+            for(var i=0; i<files.length; i++) {
+                var file = files[i];
+                var compressedUrl = await compressImage(file);
+                currentImagesBase64.push(compressedUrl);
+            }
+            renderPreviews();
+            btnSubmit.style.display = 'inline-flex';
+            btnSubmit.innerHTML = '<i class="fas fa-save" style="margin-right:6px;"></i> Lưu thay đổi';
+            submitMsg.textContent = '';
+        }
+        fileInput.value = ''; // Reset để có thể chọn lại file cũ
+    });
+
+    btnSubmit.addEventListener('click', async function() {
+        if (!currentUser) {
+            openAuthModal(false);
+            return;
+        }
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i> Đang lưu...';
+        
+        try {
+            var sb = getSupabase();
+            
+            if (currentImagesBase64.length === 0) {
+                // Nếu xóa hết ảnh, coi như chưa làm
+                await sb.from('user_problems').delete().eq('user_id', currentUser.id).eq('problem_id', id);
+                completedProblems.delete(id);
+                var badge = document.getElementById('math-status-badge');
+                if (badge) {
+                    badge.textContent = 'NOT SOLVED';
+                    badge.style.background = '#ef4444';
+                }
+            } else {
+                // Lưu trạng thái và ảnh lên Supabase
+                await sb.from('user_problems').upsert({ 
+                    user_id: currentUser.id, 
+                    problem_id: id, 
+                    completed: true,
+                    solution_images: currentImagesBase64
+                });
+                completedProblems.add(id);
+                var badge = document.getElementById('math-status-badge');
+                if (badge) {
+                    badge.textContent = 'SOLVED';
+                    badge.style.background = '#22c55e';
+                }
+            }
+            
+            btnSubmit.style.display = 'none';
+            submitMsg.textContent = '🎉 Đã lưu bài thành công!';
+            submitMsg.style.color = '#22c55e';
+            
+        } catch(e) {
+            console.error(e);
+            submitMsg.textContent = '❌ Có lỗi xảy ra khi lưu bài.';
+            submitMsg.style.color = '#ef4444';
+        } finally {
+            btnSubmit.disabled = false;
+        }
+    });
 }
 
 // ===== ROUTER =====

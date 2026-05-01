@@ -486,7 +486,18 @@ html.dark-mode .blog-card.ticked {
 }
 .blog-article {
     width: 100%;
-    max-width: 680px;
+    max-width: 760px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 48px 56px;
+    box-shadow: var(--shadow-md);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+}
+
+@media (max-width: 600px) {
+    .blog-article { padding: 24px 20px; }
 }
 .blog-back {
     font-size: 13px; color: var(--text-muted);
@@ -503,7 +514,7 @@ html.dark-mode .blog-card.ticked {
     text-transform: uppercase; letter-spacing: 0.5px;
 }
 .blog-article-title {
-    font-family: 'Lora', 'Be Vietnam Pro', serif;
+    font-family: 'Be Vietnam Pro', sans-serif;
     font-size: 34px; font-weight: 700;
     line-height: 1.25; letter-spacing: -0.3px;
     color: var(--text); margin-bottom: 24px;
@@ -516,7 +527,7 @@ html.dark-mode .blog-card.ticked {
 
 /* ===== BLOG BODY ===== */
 .blog-body {
-    font-family: 'Lora', Georgia, serif;
+    font-family: 'Be Vietnam Pro', sans-serif;
     font-size: 18px;
     line-height: 1.9;
     color: var(--text);

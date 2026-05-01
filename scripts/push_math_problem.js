@@ -14,7 +14,10 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // =========================================================
 // PHẦN CONTENT (dùng String.raw để giữ nguyên LaTeX)
 // =========================================================
-const summaryText = String.raw`Cho các số thực dương $a, b, c$ thỏa mãn $4(ab+bc+ca)=5c^2$. Tìm giá trị lớn nhất của biểu thức $S = \sqrt{\frac{2(a+b)}{c}} - \frac{a^2+b^2}{c^2}$.`;
+const summaryText = String.raw`Cho đường tròn $(O; R)$ có đường kính $AB$ vuông góc với dây cung $CD$ tại điểm $I$ ($I$ nằm giữa $A$ và $O$). Lấy điểm $E$ bất kỳ trên cung nhỏ $BC$ ($E$ khác $B$ và $C$). Hai đoạn thẳng $AE$ và $CD$ cắt nhau tại $K$.
+a) Chứng minh tứ giác $KEBI$ là tứ giác nội tiếp.
+b) Chứng minh: $AK \cdot AE = AB \cdot AI$.
+c) Gọi $P$ là giao điểm của tia $BE$ và tia $DC, Q$ là giao điểm của hai đường thẳng $AP$ và $BK$. Chứng minh $OQ$ là tiếp tuyến của đường tròn ngoại tiếp $\Delta PQE$.`;
 
 const analysisText = String.raw`Đang cập nhật`;
 
@@ -24,13 +27,13 @@ async function pushToDatabase() {
     // =========================================================
     // VÙNG NÀY LÀ CỦA BẠN: HÃY TỰ CHỈNH SỬA TRƯỚC KHI CHẠY
     // =========================================================
-    id: "vao10_math_030",
-    title: "Bất đẳng thức - Đề vào 10 Ninh Bình 2025",
+    id: "vao10_math_041",
+    title: "Hình học - Đề vào 10 Bạc Liêu 2025",
     subcategory: "vao_10", // Đánh dấu đây là bài tập vào lớp 10
-    source: "Đề thi vào 10 Ninh Bình 2025",
+    source: "Đề thi vào 10 Bạc Liêu 2025",
     source_url: "",
     difficulty: "Khó",
-    tags: ["Bất đẳng thức"], // Chỉ được chọn trong 3 tag: "Hình học", "Bất đẳng thức", "Other"
+    tags: ["Hình học"], // Chỉ được chọn trong 3 tag: "Hình học", "Bất đẳng thức", "Other"
 
     summary: summaryText,
     analysis_and_solution: analysisText
