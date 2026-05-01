@@ -1,8 +1,5 @@
 // THUNOPRO Dynamic SPA Router
 
-const SUPABASE_URL = "https://jtjmeqlrcwfbewmxqsxy.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0am1lcWxyY3dmYmV3bXhxc3h5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjQzMDU4NSwiZXhwIjoyMDkyMDA2NTg1fQ.TTEQRXKorjHwf1LaJt4CF8qr4Et_j4mQ2ljgdhAhqd0";
-
 async function fetchProblems() {
     try {
         const res = await fetch(SUPABASE_URL + '/rest/v1/cs_problems?select=*&order=created_at.desc', {
@@ -732,12 +729,12 @@ function compressImage(file) {
             img.onload = () => {
                 const canvas = document.createElement('canvas');
                 let w = img.width, h = img.height;
-                const maxW = 400; // Độ phân giải cực thấp
+                const maxW = 800; // Độ phân giải đủ để đọc chữ khi phóng to
                 if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
                 canvas.width = w; canvas.height = h;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, w, h);
-                resolve(canvas.toDataURL('image/jpeg', 0.4)); // Chất lượng thấp
+                resolve(canvas.toDataURL('image/jpeg', 0.5)); // Chất lượng nén
             };
             img.src = e.target.result;
         };
@@ -780,22 +777,16 @@ async function renderMathProblemDetail(id) {
     html += renderLatex(p.summary || '');
     html += '</div>';
 
-    // Analysis section
-    html += '<div class="cf-section-label cf-section-analysis">Phân tích & Giải thuật</div>';
-    html += '<div class="cf-statement cf-analysis-body">';
-    html += renderLatex(p.analysis_and_solution || '');
-    html += '</div>';
-
     // Submit section
     html += '<div class="cf-section-label" style="background: var(--surface); color: var(--text);">Nộp bài làm</div>';
     html += '<div class="cf-statement" style="background: var(--bg); border-top: 1px solid var(--border); padding-bottom: 30px;">';
     
-    html += '<div id="submit-area" style="text-align: center; padding: 20px; border: 2px dashed var(--border); border-radius: var(--radius);">';
+    html += '<div id="submit-area" style="text-align: left; max-width: 400px; padding: 16px; border: 2px dashed var(--border); border-radius: var(--radius);">';
     html += '  <input type="file" id="solution-files" multiple accept="image/*" style="display:none;">';
-    html += '  <button id="btn-select-files" class="btn-outline" style="margin-bottom: 16px;"><i class="fas fa-image" style="margin-right:6px;"></i> Tải ảnh bài làm lên</button>';
-    html += '  <div id="preview-area" style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-bottom: 16px;"></div>';
-    html += '  <button id="btn-submit-solution" class="btn-primary" style="display:none; margin: 0 auto;"><i class="fas fa-paper-plane" style="margin-right:6px;"></i> Gửi bài</button>';
-    html += '  <p id="submit-msg" style="margin-top: 10px; font-size: 14px; font-weight: 500;"></p>';
+    html += '  <button id="btn-select-files" class="btn-outline" style="margin-bottom: 12px; padding: 6px 12px; font-size: 13px;"><i class="fas fa-image" style="margin-right:6px;"></i> Tải ảnh lên</button>';
+    html += '  <div id="preview-area" style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-start; margin-bottom: 12px;"></div>';
+    html += '  <button id="btn-submit-solution" class="btn-primary" style="display:none; padding: 6px 16px; font-size: 13px;"><i class="fas fa-paper-plane" style="margin-right:6px;"></i> Gửi bài</button>';
+    html += '  <p id="submit-msg" style="margin-top: 8px; font-size: 13px; font-weight: 500;"></p>';
     html += '</div>';
 
     html += '</div>';
@@ -816,8 +807,8 @@ async function renderMathProblemDetail(id) {
     if (!imgModal) {
         let m = document.createElement('div');
         m.id = 'img-viewer-modal';
-        m.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center;';
-        m.innerHTML = '<img id="img-viewer-content" style="max-width:90%; max-height:90%; border-radius:8px; box-shadow:0 0 20px rgba(0,0,0,0.5);"><div style="position:absolute; top:20px; right:30px; color:white; font-size:40px; cursor:pointer;" onclick="document.getElementById(\'img-viewer-modal\').style.display=\'none\'">&times;</div>';
+        m.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center; padding: 10px; box-sizing: border-box;';
+        m.innerHTML = '<img id="img-viewer-content" style="width:100%; height:100%; object-fit:contain; border-radius:4px; box-shadow:0 0 20px rgba(0,0,0,0.8);"><div style="position:absolute; top:15px; right:25px; color:white; font-size:40px; cursor:pointer; text-shadow: 0 0 10px black;" onclick="document.getElementById(\'img-viewer-modal\').style.display=\'none\'">&times;</div>';
         
         // Bấm ra ngoài ảnh để đóng
         m.addEventListener('click', function(e) {
