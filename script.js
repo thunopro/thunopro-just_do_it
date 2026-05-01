@@ -682,7 +682,14 @@ async function renderMathProblemList(subcategory) {
     var html = '<div class="cf-problems-layout">';
     html += '<div style="margin-bottom: 20px;">';
     html += '<a href="#/math" class="cf-back-link">← Quay lại Chuyên đề</a>';
-    html += '<h2 style="margin-top: 12px; font-size: 24px; font-weight: 800;">' + title + '</h2>';
+    
+    html += '<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-top: 12px;">';
+    html += '<h2 style="margin: 0; font-size: 24px; font-weight: 800;">' + title + '</h2>';
+    
+    if (subcategory === 'vao_10') {
+        html += '<a href="https://drive.google.com/drive/u/1/folders/1DGzsGCoMViKSu7OK9usoS2u-tuwVwEwd" target="_blank" style="background: linear-gradient(135deg, #0ea5e9, #3b82f6); color: white; text-decoration: none; font-weight: 700; font-size: 14px; padding: 6px 16px; border-radius: 20px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4); border: 2px solid rgba(255,255,255,0.2);"><i class="fas fa-folder-open" style="font-size: 15px;"></i> Xem lời giải chi tiết</a>';
+    }
+    html += '</div>';
     
     if (subcategory === 'vao_10') {
         html += '<div style="margin-top: 12px; display: flex; gap: 8px;" id="math-tags-filter">';
