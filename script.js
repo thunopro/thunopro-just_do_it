@@ -699,6 +699,9 @@ window.showSolversModal = function(problemId) {
         alert("Chưa có ai giải bài này. Hãy là người đầu tiên!");
         return;
     }
+    
+    var isAdmin = currentUser && currentUser.email && currentUser.email.startsWith('khacthukhacthu');
+    
     var html = '<div id="solvers-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; display:flex; justify-content:center; align-items:center;">';
     html += '<div style="background:var(--bg); padding:24px; border-radius:12px; width:90%; max-width:400px; max-height:80vh; overflow-y:auto; box-shadow:0 10px 25px rgba(0,0,0,0.2);">';
     html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">';
@@ -707,10 +710,36 @@ window.showSolversModal = function(problemId) {
     html += '</div>';
     html += '<ul style="list-style:none; padding:0; margin:0;">';
     solvers.forEach(function(email) {
-        html += '<li style="padding:10px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px;"><div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg, #10b981, #3b82f6); color:white; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:14px;">' + email.charAt(0).toUpperCase() + '</div><span style="font-weight:500; font-size:14px;">' + email + '</span></li>';
+        var actionHtml = '';
+        if (isAdmin) {
+            actionHtml = '<button onclick="viewUserSubmission(\'' + problemId + '\', \'' + email + '\')" style="margin-left:auto; font-size:12px; background:var(--primary); color:white; border:none; border-radius:4px; padding:4px 8px; cursor:pointer;">Xem bài</button>';
+        }
+        html += '<li style="padding:10px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px;"><div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg, #10b981, #3b82f6); color:white; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:14px;">' + email.charAt(0).toUpperCase() + '</div><span style="font-weight:500; font-size:14px;">' + email + '</span>' + actionHtml + '</li>';
     });
     html += '</ul></div></div>';
     document.body.insertAdjacentHTML('beforeend', html);
+}
+
+window.viewUserSubmission = async function(problemId, userEmail) {
+    try {
+        var sb = getSupabase();
+        var { data } = await sb.from('user_problems').select('solution_images').eq('problem_id', problemId).eq('user_email', userEmail).limit(1);
+        if (data && data[0] && data[0].solution_images && data[0].solution_images.length > 0) {
+            var imagesHtml = data[0].solution_images.map(img => '<img src="' + img + '" style="max-width:100%; border-radius:8px; margin-bottom:12px; border:1px solid var(--border);">').join('');
+            var modalHtml = '<div id="submission-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:10000; display:flex; justify-content:center; align-items:center; padding:20px;">' +
+                '<div style="background:var(--bg); padding:24px; border-radius:12px; width:100%; max-width:800px; max-height:90vh; overflow-y:auto; box-shadow:0 10px 25px rgba(0,0,0,0.5);">' +
+                    '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">' +
+                        '<h3 style="margin:0; font-size:18px;">Bài nộp của ' + userEmail + '</h3>' +
+                        '<button onclick="document.getElementById(\'submission-modal\').remove()" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--text);">&times;</button>' +
+                    '</div>' +
+                    '<div>' + imagesHtml + '</div>' +
+                '</div>' +
+            '</div>';
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        } else {
+            alert("Người dùng này chỉ đánh dấu hoàn thành chứ không tải ảnh bài nộp lên.");
+        }
+    } catch(e) { alert("Có lỗi xảy ra khi lấy bài nộp."); }
 }
 
 async function renderMathProblemList(subcategory) {
@@ -1028,9 +1057,7 @@ async function router() {
     appRoot.className = '';
     appRoot.style = '';
 
-    if (path === '/') {
-        await renderTodayPage();
-    } else if (path === '/problems') {
+    if (path === '/' || path === '/problems') {
         await renderAllProblems();
 
     } else if (path === '/blog') {
@@ -1059,8 +1086,7 @@ async function router() {
     }
 
     document.querySelectorAll('.menu-list a').forEach(function (el) { el.classList.remove('active'); });
-    if (path === '/') { var n = document.getElementById('nav-today'); if (n) n.classList.add('active'); }
-    if (path === '/problems') { var n = document.getElementById('nav-problems'); if (n) n.classList.add('active'); }
+    if (path === '/' || path === '/problems') { var n = document.getElementById('nav-problems'); if (n) n.classList.add('active'); }
     if (path.startsWith('/math')) { var n = document.getElementById('nav-math'); if (n) n.classList.add('active'); }
 
     if (path === '/blog' || path.startsWith('/blog/')) { var n = document.getElementById('nav-blog'); if (n) n.classList.add('active'); }
