@@ -14,10 +14,8 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // =========================================================
 // PHẦN CONTENT (dùng String.raw để giữ nguyên LaTeX)
 // =========================================================
-const summaryText = String.raw`Cho đường tròn $(O; R)$ có đường kính $AB$ vuông góc với dây cung $CD$ tại điểm $I$ ($I$ nằm giữa $A$ và $O$). Lấy điểm $E$ bất kỳ trên cung nhỏ $BC$ ($E$ khác $B$ và $C$). Hai đoạn thẳng $AE$ và $CD$ cắt nhau tại $K$.
-a) Chứng minh tứ giác $KEBI$ là tứ giác nội tiếp.
-b) Chứng minh: $AK \cdot AE = AB \cdot AI$.
-c) Gọi $P$ là giao điểm của tia $BE$ và tia $DC, Q$ là giao điểm của hai đường thẳng $AP$ và $BK$. Chứng minh $OQ$ là tiếp tuyến của đường tròn ngoại tiếp $\Delta PQE$.`;
+const summaryText = String.raw`Cho $a, b, c$ là các số thực không âm và thỏa mãn $a^2 + b^2 + c^2 = 8$. Tìm giá trị lớn nhất của biểu thức
+$$P = \frac{2a + c}{1 + bc} + \frac{2b + c}{1 + ca}.$$`;
 
 const analysisText = String.raw`Đang cập nhật`;
 
@@ -27,13 +25,13 @@ async function pushToDatabase() {
     // =========================================================
     // VÙNG NÀY LÀ CỦA BẠN: HÃY TỰ CHỈNH SỬA TRƯỚC KHI CHẠY
     // =========================================================
-    id: "vao10_math_041",
-    title: "Hình học - Đề vào 10 Bạc Liêu 2025",
-    subcategory: "vao_10", // Đánh dấu đây là bài tập vào lớp 10
-    source: "Đề thi vào 10 Bạc Liêu 2025",
+    id: "vao10chuyen_math_009",
+    title: "Bất đẳng thức - Bài tập vào 10 chuyên Bắc Ninh 2024",
+    subcategory: "vao_10_chuyen", // "vao_10" (vào 10 thường) hoặc "vao_10_chuyen" (vào 10 chuyên)
+    source: "Đề thi vào 10 chuyên Bắc Ninh 2024",
     source_url: "",
     difficulty: "Khó",
-    tags: ["Hình học"], // Chỉ được chọn trong 3 tag: "Hình học", "Bất đẳng thức", "Other"
+    tags: ["Bất đẳng thức"], // Chỉ được chọn trong 4 tag: "Hình học", "Bất đẳng thức", "Tổ hợp", "Other"
 
     summary: summaryText,
     analysis_and_solution: analysisText

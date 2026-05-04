@@ -639,6 +639,11 @@ async function renderMathCategories() {
     html += '<div><strong style="font-size: 18px;">Bài tập vào 10</strong><small>Tuyển tập đề thi môn Toán vào lớp 10</small></div>';
     html += '</a>';
 
+    html += '<a href="#/math/list/vao_10_chuyen" class="cf-cat-card" style="border: 1px solid var(--border); border-radius: var(--radius); padding: 24px;">';
+    html += '<div class="cf-cat-lbl" style="width: 48px; height: 48px; font-size: 20px; background: rgba(234,179,8,0.1); color: #eab308;"><i class="fas fa-medal"></i></div>';
+    html += '<div><strong style="font-size: 18px;">Bài tập vào 10 chuyên</strong><small>Tuyển tập đề thi vào lớp 10 chuyên Toán</small></div>';
+    html += '</a>';
+
     html += '</div></div>';
     appRoot.innerHTML = html;
 }
@@ -675,6 +680,7 @@ async function renderMathProblemList(subcategory) {
     
     let title = "Danh sách bài tập";
     if (subcategory === 'vao_10') title = "Tuyển tập Bài tập vào 10";
+    else if (subcategory === 'vao_10_chuyen') title = "Tuyển tập Bài tập vào 10 chuyên";
 
     var html = '<div class="cf-problems-layout">';
     html += '<div style="margin-bottom: 20px;">';
@@ -683,16 +689,19 @@ async function renderMathProblemList(subcategory) {
     html += '<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-top: 12px;">';
     html += '<h2 style="margin: 0; font-size: 24px; font-weight: 800;">' + title + '</h2>';
     
-    if (subcategory === 'vao_10') {
+    if (subcategory === 'vao_10' || subcategory === 'vao_10_chuyen') {
         html += '<a href="https://drive.google.com/drive/u/1/folders/1DGzsGCoMViKSu7OK9usoS2u-tuwVwEwd" target="_blank" style="background: linear-gradient(135deg, #0ea5e9, #3b82f6); color: white; text-decoration: none; font-weight: 700; font-size: 14px; padding: 6px 16px; border-radius: 20px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4); border: 2px solid rgba(255,255,255,0.2);"><i class="fas fa-folder-open" style="font-size: 15px;"></i> Xem lời giải chi tiết</a>';
     }
     html += '</div>';
     
-    if (subcategory === 'vao_10') {
+    if (subcategory === 'vao_10' || subcategory === 'vao_10_chuyen') {
         html += '<div style="margin-top: 12px; display: flex; gap: 8px;" id="math-tags-filter">';
         html += '<button class="btn-outline math-filter-btn" style="border-color: var(--text);" data-tag="all">Tất cả</button>';
         html += '<button class="btn-outline math-filter-btn" data-tag="Hình học">Hình học</button>';
         html += '<button class="btn-outline math-filter-btn" data-tag="Bất đẳng thức">Bất đẳng thức</button>';
+        if (subcategory === 'vao_10_chuyen') {
+            html += '<button class="btn-outline math-filter-btn" data-tag="Tổ hợp">Tổ hợp</button>';
+        }
         html += '<button class="btn-outline math-filter-btn" data-tag="Other">Other</button>';
         html += '</div>';
     }
@@ -703,7 +712,7 @@ async function renderMathProblemList(subcategory) {
     html += '</div></div>';
     appRoot.innerHTML = html;
 
-    if (subcategory === 'vao_10') {
+    if (subcategory === 'vao_10' || subcategory === 'vao_10_chuyen') {
         const filterBtns = document.querySelectorAll('.math-filter-btn');
         filterBtns.forEach(btn => {
             btn.addEventListener('click', function() {
