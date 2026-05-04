@@ -653,29 +653,71 @@ function buildMathProblemsTable(list) {
         return '<p style="color: var(--text-muted);">Chưa có bài tập nào thỏa mãn.</p>';
     }
     var html = '<table class="cf-table"><thead><tr>';
-    html += '<th style="width:36px;text-align:center;">✓</th><th style="width:120px">Mã bài</th><th>Tên bài</th><th style="width:150px">Nguồn</th>';
+    html += '<th style="width:36px;text-align:center;">✓</th><th style="width:120px">Mã bài</th><th>Tên bài</th><th style="width:150px">Nguồn</th><th style="width:100px;text-align:center;">Đã giải</th>';
     html += '</tr></thead><tbody>';
     html += list.map(function(p) {
         var isDone = completedProblems.has(p.id);
         var checkIcon = isDone 
             ? '<i class="fas fa-check-circle" style="color:#22c55e; font-size:16px;" title="Đã nộp bài"></i>' 
             : '<i class="far fa-circle" style="color:var(--border); font-size:16px;" title="Chưa nộp bài"></i>';
+        
+        var solvers = (window.mathSolverMap && window.mathSolverMap[p.id]) ? window.mathSolverMap[p.id] : [];
+        var solverCountHtml = '<span class="solver-count" onclick="showSolversModal(\'' + p.id + '\')" style="cursor:pointer; color:var(--primary); font-weight:bold; background:rgba(59, 130, 246, 0.1); padding:4px 10px; border-radius:12px; display:inline-block; font-size:13px; transition:0.2s;" onmouseover="this.style.background=\'rgba(59, 130, 246, 0.2)\'" onmouseout="this.style.background=\'rgba(59, 130, 246, 0.1)\'">' + solvers.length + ' <i class="fas fa-users"></i></span>';
 
         return '<tr>' +
             '<td style="text-align:center;">' + checkIcon + '</td>' +
             '<td class="cf-td-id">' + (p.id || '') + '</td>' +
             '<td><a href="#/math/problem/' + p.id + '" class="cf-table-link' + (isDone ? ' math-done-link' : '') + '">' + (p.title || '') + '</a></td>' +
             '<td class="cf-td-src">' + (p.source || '–') + '</td>' +
+            '<td style="text-align:center;">' + solverCountHtml + '</td>' +
             '</tr>';
     }).join('');
     html += '</tbody></table>';
     return html;
 }
 
+async function fetchMathSolvers() {
+    try {
+        const sb = getSupabase();
+        const { data } = await sb.from('user_problems').select('problem_id, user_email').eq('completed', true);
+        const map = {};
+        if (data) {
+            data.forEach(r => {
+                if (!map[r.problem_id]) map[r.problem_id] = [];
+                if (!map[r.problem_id].includes(r.user_email || 'Người dùng ẩn danh')) {
+                    map[r.problem_id].push(r.user_email || 'Người dùng ẩn danh');
+                }
+            });
+        }
+        window.mathSolverMap = map;
+    } catch(e) { window.mathSolverMap = {}; }
+}
+
+window.showSolversModal = function(problemId) {
+    var solvers = window.mathSolverMap && window.mathSolverMap[problemId] ? window.mathSolverMap[problemId] : [];
+    if (solvers.length === 0) {
+        alert("Chưa có ai giải bài này. Hãy là người đầu tiên!");
+        return;
+    }
+    var html = '<div id="solvers-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; display:flex; justify-content:center; align-items:center;">';
+    html += '<div style="background:var(--bg); padding:24px; border-radius:12px; width:90%; max-width:400px; max-height:80vh; overflow-y:auto; box-shadow:0 10px 25px rgba(0,0,0,0.2);">';
+    html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">';
+    html += '<h3 style="margin:0; font-size:18px;">Danh sách đã giải</h3>';
+    html += '<button onclick="document.getElementById(\'solvers-modal\').remove()" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-muted);">&times;</button>';
+    html += '</div>';
+    html += '<ul style="list-style:none; padding:0; margin:0;">';
+    solvers.forEach(function(email) {
+        html += '<li style="padding:10px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px;"><div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg, #10b981, #3b82f6); color:white; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:14px;">' + email.charAt(0).toUpperCase() + '</div><span style="font-weight:500; font-size:14px;">' + email + '</span></li>';
+    });
+    html += '</ul></div></div>';
+    document.body.insertAdjacentHTML('beforeend', html);
+}
+
 async function renderMathProblemList(subcategory) {
     const appRoot = document.getElementById('app-root');
     appRoot.innerHTML = '<div class="cf-problems-layout"><div class="cf-loading">Đang tải...</div></div>';
     
+    await fetchMathSolvers();
     const problems = await fetchMathProblems(subcategory);
     
     let title = "Danh sách bài tập";
@@ -690,7 +732,10 @@ async function renderMathProblemList(subcategory) {
     html += '<h2 style="margin: 0; font-size: 24px; font-weight: 800;">' + title + '</h2>';
     
     if (subcategory === 'vao_10' || subcategory === 'vao_10_chuyen') {
-        html += '<a href="https://drive.google.com/drive/u/1/folders/1DGzsGCoMViKSu7OK9usoS2u-tuwVwEwd" target="_blank" style="background: linear-gradient(135deg, #0ea5e9, #3b82f6); color: white; text-decoration: none; font-weight: 700; font-size: 14px; padding: 6px 16px; border-radius: 20px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4); border: 2px solid rgba(255,255,255,0.2);"><i class="fas fa-folder-open" style="font-size: 15px;"></i> Xem lời giải chi tiết</a>';
+        let solveLink = subcategory === 'vao_10_chuyen' ? 'https://gemini.google.com/app' : 'https://drive.google.com/drive/u/1/folders/1DGzsGCoMViKSu7OK9usoS2u-tuwVwEwd';
+        let solveIcon = subcategory === 'vao_10_chuyen' ? 'fas fa-robot' : 'fas fa-folder-open';
+        let solveText = subcategory === 'vao_10_chuyen' ? ' Hỏi Gemini lời giải' : ' Xem lời giải chi tiết';
+        html += '<a href="' + solveLink + '" target="_blank" style="background: linear-gradient(135deg, #0ea5e9, #3b82f6); color: white; text-decoration: none; font-weight: 700; font-size: 14px; padding: 6px 16px; border-radius: 20px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4); border: 2px solid rgba(255,255,255,0.2);"><i class="' + solveIcon + '" style="font-size: 15px;"></i>' + solveText + '</a>';
     }
     html += '</div>';
     
@@ -943,6 +988,7 @@ async function renderMathProblemDetail(id) {
                 // Lưu trạng thái và ảnh lên Supabase
                 await sb.from('user_problems').upsert({ 
                     user_id: currentUser.id, 
+                    user_email: currentUser.email,
                     problem_id: id, 
                     completed: true,
                     solution_images: currentImagesBase64
@@ -1119,7 +1165,7 @@ async function toggleProblemDone(problemId, btn) {
             completedProblems.delete(problemId);
             btn.classList.remove('done'); btn.textContent = '';
         } else {
-            await sb.from('user_problems').upsert({ user_id: currentUser.id, problem_id: problemId, completed: true });
+            await sb.from('user_problems').upsert({ user_id: currentUser.id, user_email: currentUser.email, problem_id: problemId, completed: true });
             completedProblems.add(problemId);
             btn.classList.add('done'); btn.textContent = '✓';
         }
