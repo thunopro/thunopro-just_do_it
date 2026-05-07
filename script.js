@@ -679,18 +679,15 @@ function buildMathProblemsTable(list) {
 async function fetchMathSolvers() {
     try {
         const sb = getSupabase();
-        const { data } = await sb.from('user_problems').select('problem_id, user_email, solution_images').eq('completed', true);
+        const { data } = await sb.from('user_problems').select('problem_id, user_email').eq('completed', true);
         const map = {};
         if (data) {
             data.forEach(r => {
                 if (!map[r.problem_id]) map[r.problem_id] = [];
                 let email = r.user_email || 'Người dùng ẩn danh';
-                let hasImages = r.solution_images && r.solution_images.length > 0;
                 let existing = map[r.problem_id].find(x => x.email === email);
                 if (!existing) {
-                    map[r.problem_id].push({ email: email, hasImages: hasImages });
-                } else if (hasImages && !existing.hasImages) {
-                    existing.hasImages = true;
+                    map[r.problem_id].push({ email: email });
                 }
             });
         }
@@ -708,8 +705,6 @@ window.showSolversModal = function(problemId) {
         return;
     }
     
-    var isAdmin = currentUser && currentUser.email && currentUser.email.startsWith('khacthukhacthu');
-    
     var html = '<div id="solvers-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; display:flex; justify-content:center; align-items:center;">';
     html += '<div style="background:var(--bg); padding:24px; border-radius:12px; width:90%; max-width:400px; max-height:80vh; overflow-y:auto; box-shadow:0 10px 25px rgba(0,0,0,0.2);">';
     html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">';
@@ -719,10 +714,8 @@ window.showSolversModal = function(problemId) {
     html += '<ul style="list-style:none; padding:0; margin:0;">';
     solvers.forEach(function(solver) {
         var email = solver.email;
-        var actionHtml = '';
-        if (solver.hasImages || isAdmin) {
-            actionHtml = '<button onclick="viewUserSubmission(\'' + problemId + '\', \'' + email + '\')" style="margin-left:auto; font-size:12px; background:var(--primary); color:white; border:none; border-radius:4px; padding:4px 8px; cursor:pointer;">Xem bài</button>';
-        }
+        var actionHtml = '<button onclick="viewUserSubmission(\'' + problemId + '\', \'' + email + '\')" style="margin-left:auto; font-size:12px; background:#3b82f6; color:white; border:none; border-radius:4px; padding:4px 8px; cursor:pointer;">Xem bài</button>';
+        
         html += '<li style="padding:10px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px;"><div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg, #10b981, #3b82f6); color:white; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:14px;">' + email.charAt(0).toUpperCase() + '</div><span style="font-weight:500; font-size:14px;">' + email + '</span>' + actionHtml + '</li>';
     });
     html += '</ul></div></div>';
