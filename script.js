@@ -1,19 +1,23 @@
 // THUNOPRO Dynamic SPA Router
 
-async function fetchProblems() {
+async function fetchCSProblems(subcategory) {
     try {
-        const res = await fetch(SUPABASE_URL + '/rest/v1/cs_problems?select=*&order=created_at.desc', {
+        let url = SUPABASE_URL + '/rest/v1/cs_problems?select=*&order=created_at.desc';
+        if (subcategory) {
+            url += '&subcategory=eq.' + encodeURIComponent(subcategory);
+        }
+        const res = await fetch(url, {
             headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
         });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         return await res.json();
     } catch (e) {
-        console.error('fetchProblems error:', e);
+        console.error('fetchCSProblems error:', e);
         return [];
     }
 }
 
-async function fetchProblemById(id) {
+async function fetchCSProblemById(id) {
     try {
         const res = await fetch(SUPABASE_URL + '/rest/v1/cs_problems?id=eq.' + encodeURIComponent(id) + '&select=*', {
             headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
@@ -21,6 +25,15 @@ async function fetchProblemById(id) {
         const data = await res.json();
         return data[0] || null;
     } catch (e) { return null; }
+}
+
+async function fetchAllCSProblems() {
+    try {
+        const res = await fetch(SUPABASE_URL + '/rest/v1/cs_problems?select=subcategory', {
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+        });
+        return await res.json();
+    } catch (e) { return []; }
 }
 
 // LaTeX: render $...$ with KaTeX, text vẫn copyable nhờ title attribute
@@ -46,140 +59,126 @@ function renderLatex(raw) {
     return html;
 }
 
-// ===== TODAY PAGE =====
-async function renderTodayPage() {
+// ===== CS CATEGORIES & LISTS =====
+async function renderCSCategories() {
     const appRoot = document.getElementById('app-root');
-    appRoot.innerHTML = '<div class="cf-content"><div class="cf-loading">Đang tải bài tập...</div></div>';
-
-    const problems = await fetchProblems();
-    if (!problems.length) {
-        appRoot.innerHTML = '<div class="cf-content"><p class="cf-empty">Chưa có bài nào. Dùng push_problem.js để thêm!</p></div>';
-        return;
-    }
-
-    var html = '<div class="cf-content">';
-    problems.forEach(function (p) {
-        html += '<div class="cf-problem-block">';
-        // Header
-        html += '<div class="cf-problem-title-bar" data-pid="' + p.id + '">';
-        html += '<a class="cf-prob-title" href="#/problem/' + p.id + '">' + (p.title || p.id) + '</a>';
-        if (p.source) html += '<span class="cf-prob-source">' + p.source + '</span>';
-        html += '</div>';
-        // Statement
-        html += '<div class="cf-statement">';
-        html += renderLatex(p.summary || '');
-        html += '</div>';
-        // Footer link
-        html += '<div class="cf-prob-footer" style="display: flex; gap: 12px; margin-top: 12px;">';
-        if (p.source_url) {
-            html += '<a href="' + p.source_url + '" target="_blank" class="btn-outline">Link bài tập</a>';
+    appRoot.innerHTML = '<div class="cf-content"><div class="cf-loading">Đang tải chuyên đề CS...</div></div>';
+    
+    const problems = await fetchAllCSProblems();
+    
+    // Extract unique top-level categories
+    const categories = new Set();
+    problems.forEach(p => {
+        if (p.subcategory) {
+            const top = p.subcategory.split('/')[0];
+            categories.add(top);
         }
-        html += '<a href="#/problem/' + p.id + '" class="btn-primary">Xem phân tích</a>';
-        html += '</div>';
-        html += '</div>';
     });
+
+    let html = '<div class="cf-content" style="max-width: 1000px; margin: 0 auto; padding-top: 40px;">';
+    html += '<h2 style="margin-bottom: 24px; font-size: 28px; font-weight: 800;">Chuyên đề Computer Science</h2>';
+    
+    if (categories.size === 0) {
+        html += '<p style="color:var(--text-muted);">Chưa có bài tập CS nào được phân loại.</p>';
+    } else {
+        html += '<div class="cf-cat-grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; background: transparent; border: none;">';
+        categories.forEach(cat => {
+            let label = cat.replace(/_/g, ' ').toUpperCase();
+            let icon = 'fa-code';
+            if (cat.includes('universal')) icon = 'fa-globe';
+            
+            html += '<a href="#/cs/category/' + encodeURIComponent(cat) + '" class="cf-cat-card" style="border: 1px solid var(--border); border-radius: var(--radius); padding: 24px;">';
+            html += '<div class="cf-cat-lbl" style="width: 48px; height: 48px; font-size: 20px;"><i class="fas ' + icon + '"></i></div>';
+            html += '<div><strong style="font-size: 18px;">' + label + '</strong><small>Khám phá các bài tập trong ' + label + '</small></div>';
+            html += '</a>';
+        });
+        html += '</div>';
+    }
     html += '</div>';
     appRoot.innerHTML = html;
-
-    // Gắn nút "Hoàn thành" vào mỗi title-bar
-    document.querySelectorAll('.cf-problem-title-bar[data-pid]').forEach(function(bar) {
-        bar.appendChild(makeDoneBtn(bar.dataset.pid));
-    });
 }
 
-// ===== PROBLEM DETAIL PAGE =====
-async function renderProblemDetail(id) {
+async function renderCSSubcategories(parentCat) {
     const appRoot = document.getElementById('app-root');
-    appRoot.innerHTML = '<div class="cf-content"><div class="cf-loading">Đang tải bài ' + id + '...</div></div>';
+    appRoot.innerHTML = '<div class="cf-content"><div class="cf-loading">Đang tải danh sách...</div></div>';
+    
+    const all = await fetchAllCSProblems();
+    const subs = new Set();
+    all.forEach(p => {
+        if (p.subcategory && p.subcategory.startsWith(parentCat + '/')) {
+            const parts = p.subcategory.split('/');
+            if (parts.length > 1) subs.add(parts[1]);
+        }
+    });
 
-    var p = await fetchProblemById(id);
-    if (!p) {
-        appRoot.innerHTML = '<div class="cf-content"><div class="cf-problem-block"><p>Không tìm thấy bài <strong>' + id + '</strong>.</p><a href="#/" class="cf-back-link">← Quay lại</a></div></div>';
-        return;
-    }
-
-    var html = '<div class="cf-content">';
-    html += '<div class="cf-problem-block">';
-    // Title bar
-    html += '<div class="cf-problem-title-bar">';
-    html += '<a class="cf-back-link" href="#/">←</a>';
-    html += '<span class="cf-prob-title cf-prob-title-large">' + (p.title || p.id) + '</span>';
-    if (p.source_url) {
-        html += '<a class="cf-prob-source" href="' + p.source_url + '" target="_blank">' + (p.source || 'Source') + ' ↗</a>';
-    } else if (p.source) {
-        html += '<span class="cf-prob-source">' + p.source + '</span>';
-    }
-    html += '</div>';
-
-    // Summary section
-    html += '<div class="cf-section-label">Tóm tắt đề bài</div>';
-    html += '<div class="cf-statement">';
-    html += renderLatex(p.summary || '');
-    html += '</div>';
-
-    // Analysis section
-    html += '<div class="cf-section-label cf-section-analysis">Phân tích & Giải thuật</div>';
-    html += '<div class="cf-statement cf-analysis-body">';
-    html += renderLatex(p.analysis_and_solution || '');
-    html += '</div>';
-
+    let html = '<div class="cf-content" style="max-width: 1000px; margin: 0 auto; padding-top: 40px;">';
+    html += '<a href="#/" class="cf-back-link" style="margin-bottom:20px; display:inline-block;">← Quay lại</a>';
+    html += '<h2 style="margin-bottom: 24px; font-size: 28px; font-weight: 800;">' + parentCat.replace(/_/g, ' ').toUpperCase() + '</h2>';
+    
+    html += '<div class="cf-cat-grid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;">';
+    subs.forEach(sub => {
+        let label = sub.replace(/_/g, ' ').toUpperCase();
+        html += '<a href="#/cs/list/' + encodeURIComponent(parentCat + '/' + sub) + '" class="cf-cat-card" style="padding: 20px;">';
+        html += '<div><strong style="font-size: 16px;">' + label + '</strong></div>';
+        html += '</a>';
+    });
     html += '</div></div>';
     appRoot.innerHTML = html;
 }
 
-// Keep all problems in memory for client-side search
-var _allProblemsCache = [];
-
-function buildProblemsTable(list) {
-    if (!list.length) return '<tr><td colspan="4" style="padding:20px;color:#888;">Không tìm thấy bài nào.</td></tr>';
-    return list.map(function (p) {
-        var isDone = completedProblems.has(p.id);
-        var doneCell = isDone
-            ? '<td style="text-align:center;"><span style="color:#22c55e;font-size:16px;font-weight:700;">✓</span></td>'
-            : '<td style="text-align:center;"><span style="color:var(--border);font-size:14px;">○</span></td>';
-        return '<tr>' +
-            doneCell +
-            '<td class="cf-td-id">' + (p.id || '') + '</td>' +
-            '<td><a href="#/problem/' + p.id + '" class="cf-table-link">' + (p.title || '') + '</a></td>' +
-            '<td class="cf-td-src">' + (p.source || '–') + '</td>' +
-            '</tr>';
-    }).join('');
-}
-
-async function renderAllProblems() {
+async function renderCSProblemList(fullSubcat) {
     const appRoot = document.getElementById('app-root');
-    appRoot.innerHTML = '<div class="cf-problems-layout"><div class="cf-loading">Đang tải...</div></div>';
-    _allProblemsCache = await fetchProblems();
+    appRoot.innerHTML = '<div class="cf-problems-layout"><div class="cf-loading">Đang tải bài tập...</div></div>';
+    
+    await fetchMathSolvers(); // Reuse the same solver map fetcher
+    const problems = await fetchCSProblems(fullSubcat);
+    
+    const parts = fullSubcat.split('/');
+    const title = parts.length > 1 ? parts[1].replace(/_/g, ' ').toUpperCase() : fullSubcat;
 
     var html = '<div class="cf-problems-layout">';
-
-    // LEFT: table
-    html += '<div class="cf-problems-main">';
-    html += '<div class="cf-inline-search">';
-    html += '<input type="text" id="prob-search" placeholder="Tìm bài..." autocomplete="off">';
+    html += '<div style="margin-bottom: 20px;">';
+    html += '<a href="#/cs/category/' + encodeURIComponent(parts[0]) + '" class="cf-back-link">← Quay lại</a>';
+    html += '<h2 style="margin-top: 12px; font-size: 24px; font-weight: 800;">' + title + '</h2>';
     html += '</div>';
-    html += '<table class="cf-table"><thead><tr>';
-    html += '<th style="width:36px;text-align:center;">✓</th><th style="width:90px">#</th><th>Tên bài</th><th style="width:130px">Nguồn</th>';
-    html += '</tr></thead><tbody id="prob-tbody">';
-    html += buildProblemsTable(_allProblemsCache);
-    html += '</tbody></table>';
-    html += '</div>'; // end main
 
-    html += '</div>'; // end layout
+    html += '<div class="cf-problems-main">';
+    html += buildMathProblemsTable(problems); // Reuse the math table builder as it supports solver counts
+    html += '</div></div>';
+    appRoot.innerHTML = html;
+}
+
+async function renderCSProblemDetail(id) {
+    const appRoot = document.getElementById('app-root');
+    appRoot.innerHTML = '<div class="cf-content"><div class="cf-loading">Đang tải...</div></div>';
+
+    const p = await fetchCSProblemById(id);
+    if (!p) {
+        appRoot.innerHTML = '<div class="cf-content"><p>Không tìm thấy bài tập.</p></div>';
+        return;
+    }
+
+    let backUrl = p.subcategory ? '#/cs/list/' + encodeURIComponent(p.subcategory) : '#/';
+
+    var html = '<div class="cf-content">';
+    html += '<div class="cf-problem-block">';
+    html += '<div class="cf-problem-title-bar">';
+    html += '<a class="cf-back-link" href="' + backUrl + '">←</a>';
+    html += '<span class="cf-prob-title cf-prob-title-large">' + (p.title || p.id) + '</span>';
+    html += '</div>';
+
+    html += '<div class="cf-section-label">Tóm tắt đề bài</div>';
+    html += '<div class="cf-statement">' + renderLatex(p.summary || '') + '</div>';
+
+    html += '<div class="cf-section-label cf-section-analysis">Phân tích & Giải thuật</div>';
+    html += '<div class="cf-statement cf-analysis-body">' + renderLatex(p.analysis_and_solution || '') + '</div>';
+
+    html += '<div style="margin-top: 30px; border-top: 1px solid var(--border); padding-top: 20px;" id="problem-submission-zone"></div>';
+    html += '</div></div>';
     appRoot.innerHTML = html;
 
-    function applyFilter() {
-        var q = (document.getElementById('prob-search').value || '').toLowerCase();
-        var filtered = _allProblemsCache.filter(function (p) {
-            var matchQ = !q ||
-                (p.title || '').toLowerCase().includes(q) ||
-                (p.id || '').toLowerCase().includes(q) ||
-                (p.source || '').toLowerCase().includes(q);
-            return matchQ;
-        });
-        document.getElementById('prob-tbody').innerHTML = buildProblemsTable(filtered);
-    }
-    document.getElementById('prob-search').addEventListener('input', applyFilter);
+    // Reuse the same submission/done logic as Math
+    renderSubmissionZone(id, 'cs_problems'); 
 }
 
 
@@ -664,10 +663,11 @@ function buildMathProblemsTable(list) {
         var solvers = (window.mathSolverMap && window.mathSolverMap[p.id]) ? window.mathSolverMap[p.id] : [];
         var solverCountHtml = '<span class="solver-count" onclick="showSolversModal(\'' + p.id + '\')" style="cursor:pointer; color:var(--primary); font-weight:bold; background:rgba(59, 130, 246, 0.1); padding:4px 10px; border-radius:12px; display:inline-block; font-size:13px; transition:0.2s;" onmouseover="this.style.background=\'rgba(59, 130, 246, 0.2)\'" onmouseout="this.style.background=\'rgba(59, 130, 246, 0.1)\'">' + solvers.length + ' <i class="fas fa-users"></i></span>';
 
+        var href = (p.id && p.id.startsWith('cs_')) ? '#/cs/problem/' + p.id : '#/math/problem/' + p.id;
         return '<tr>' +
             '<td style="text-align:center;">' + checkIcon + '</td>' +
             '<td class="cf-td-id">' + (p.id || '') + '</td>' +
-            '<td><a href="#/math/problem/' + p.id + '" class="cf-table-link' + (isDone ? ' math-done-link' : '') + '">' + (p.title || '') + '</a></td>' +
+            '<td><a href="' + href + '" class="cf-table-link' + (isDone ? ' math-done-link' : '') + '">' + (p.title || '') + '</a></td>' +
             '<td class="cf-td-src">' + (p.source || '–') + '</td>' +
             '<td style="text-align:center;">' + solverCountHtml + '</td>' +
             '</tr>';
@@ -679,18 +679,26 @@ function buildMathProblemsTable(list) {
 async function fetchMathSolvers() {
     try {
         const sb = getSupabase();
-        const { data } = await sb.from('user_problems').select('problem_id, user_email').eq('completed', true);
+        const { data } = await sb.from('user_problems').select('problem_id, user_email, solution_images').eq('completed', true);
         const map = {};
         if (data) {
             data.forEach(r => {
                 if (!map[r.problem_id]) map[r.problem_id] = [];
-                if (!map[r.problem_id].includes(r.user_email || 'Người dùng ẩn danh')) {
-                    map[r.problem_id].push(r.user_email || 'Người dùng ẩn danh');
+                let email = r.user_email || 'Người dùng ẩn danh';
+                let hasImages = r.solution_images && r.solution_images.length > 0;
+                let existing = map[r.problem_id].find(x => x.email === email);
+                if (!existing) {
+                    map[r.problem_id].push({ email: email, hasImages: hasImages });
+                } else if (hasImages && !existing.hasImages) {
+                    existing.hasImages = true;
                 }
             });
         }
         window.mathSolverMap = map;
-    } catch(e) { window.mathSolverMap = {}; }
+    } catch(e) { 
+        console.error("fetchMathSolvers error:", e);
+        window.mathSolverMap = {}; 
+    }
 }
 
 window.showSolversModal = function(problemId) {
@@ -709,9 +717,10 @@ window.showSolversModal = function(problemId) {
     html += '<button onclick="document.getElementById(\'solvers-modal\').remove()" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-muted);">&times;</button>';
     html += '</div>';
     html += '<ul style="list-style:none; padding:0; margin:0;">';
-    solvers.forEach(function(email) {
+    solvers.forEach(function(solver) {
+        var email = solver.email;
         var actionHtml = '';
-        if (isAdmin) {
+        if (solver.hasImages || isAdmin) {
             actionHtml = '<button onclick="viewUserSubmission(\'' + problemId + '\', \'' + email + '\')" style="margin-left:auto; font-size:12px; background:var(--primary); color:white; border:none; border-radius:4px; padding:4px 8px; cursor:pointer;">Xem bài</button>';
         }
         html += '<li style="padding:10px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px;"><div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg, #10b981, #3b82f6); color:white; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:14px;">' + email.charAt(0).toUpperCase() + '</div><span style="font-weight:500; font-size:14px;">' + email + '</span>' + actionHtml + '</li>';
@@ -1058,8 +1067,20 @@ async function router() {
     appRoot.style = '';
 
     if (path === '/' || path === '/problems') {
-        await renderAllProblems();
-
+        await renderCSCategories();
+    } else if (path.startsWith('/cs/category/')) {
+        var cat = decodeURIComponent(path.slice('/cs/category/'.length));
+        await renderCSSubcategories(cat);
+    } else if (path.startsWith('/cs/list/')) {
+        var fullSubcat = decodeURIComponent(path.slice('/cs/list/'.length));
+        await renderCSProblemList(fullSubcat);
+    } else if (path.startsWith('/cs/problem/')) {
+        var id = decodeURIComponent(path.slice('/cs/problem/'.length));
+        await renderCSProblemDetail(id);
+    } else if (path.startsWith('/problem/')) {
+        // Legacy support
+        var id = path.slice('/problem/'.length);
+        await renderCSProblemDetail(id);
     } else if (path === '/blog') {
         await renderBlogList();
     } else if (path === '/blog/new') {

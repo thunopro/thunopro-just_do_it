@@ -29,26 +29,46 @@ async function pushAllProblems() {
     }
 
     const problemData = JSON.parse(fileContent);
-    const problemsToInsert = Array.isArray(problemData) ? problemData : [problemData];
+    const allProblems = Array.isArray(problemData) ? problemData : [problemData];
 
-    if (problemsToInsert.length === 0) {
+    if (allProblems.length === 0) {
       console.log("✅ Mảng rỗng. Không có bài tập nào cần push.");
       return;
     }
 
-    console.log(`Đang chuẩn bị đẩy ${problemsToInsert.length} bài tập lên Supabase...`);
+    const mathProblems = allProblems.filter(p => !p.id.startsWith('cs_'));
+    const csProblems = allProblems.filter(p => p.id.startsWith('cs_'));
 
-    const { data, error } = await supabase
-      .from('math_problems')
-      .insert(problemsToInsert);
+    console.log(`Đang chuẩn bị đẩy ${allProblems.length} bài tập (${mathProblems.length} Math, ${csProblems.length} CS) lên Supabase...`);
 
-    if (error) {
-      console.error("❌ Lỗi khi push lên Supabase:", error.message, error.details);
-    } else {
-      console.log(`✅ Đã đẩy thành công ${problemsToInsert.length} bài tập lên database!`);
-      // Xóa nội dung file sau khi push thành công
+    let success = true;
+
+    if (mathProblems.length > 0) {
+      const { error } = await supabase.from('math_problems').insert(mathProblems);
+      if (error) {
+        console.error("❌ Lỗi khi push Math lên Supabase:", error.message);
+        success = false;
+      } else {
+        console.log(`✅ Đã đẩy thành công ${mathProblems.length} bài Math.`);
+      }
+    }
+
+    if (csProblems.length > 0) {
+      const { error } = await supabase.from('cs_problems').insert(csProblems);
+      if (error) {
+        console.error("❌ Lỗi khi push CS lên Supabase:", error.message);
+        success = false;
+      } else {
+        console.log(`✅ Đã đẩy thành công ${csProblems.length} bài CS.`);
+      }
+    }
+
+    if (success) {
+      // Xóa nội dung file sau khi push thành công toàn bộ
       fs.writeFileSync(PENDING_FILE, '[]', 'utf-8');
-      console.log("✅ Đã dọn dẹp file data/pending_problems.json để tránh push trùng lặp.");
+      console.log("✅ Đã dọn dẹp file data/pending_problems.json.");
+    } else {
+      console.log("⚠️ Có lỗi xảy ra, file data/pending_problems.json vẫn được giữ lại để bạn kiểm tra.");
     }
   } catch (err) {
     console.error(`❌ Lỗi khi xử lý:`, err.message);

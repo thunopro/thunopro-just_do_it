@@ -26,13 +26,15 @@ Giao diện hiển thị danh sách bài tập của Toán vào 10 (`#/math/list
 ## Lưu ý về định dạng nội dung (Formatting)
 1. **Không dùng dấu `**` để in đậm**: Do hệ thống render LaTeX đơn giản (không phải Markdown full), việc dùng `**Câu a**` sẽ hiện nguyên dấu `**` trên web. Hãy dùng chữ thường hoặc định dạng khác phù hợp.
 2. **Không tự ý bịa lời giải**: Nếu chưa có lời giải chính thức hoặc phân tích cụ thể, **buộc phải để nội dung là "Đang cập nhật"**, tuyệt đối không tự viết phân tích nếu không chắc chắn hoặc không được yêu cầu.
+3. **Lược bỏ số thứ tự câu hỏi trong đề gốc**: Mỗi ảnh/bài toán được coi là một bài tập độc lập. Do đó, trong phần `summary` (tóm tắt đề bài), hãy **xóa bỏ hoàn toàn** các tiền tố số thứ tự câu, số ý, hoặc điểm số (ví dụ: xóa `Câu IV (3,0 điểm)`, `1)`, `2)`, `a)`, `b)`). CHỈ giữ lại các đánh dấu nếu chúng là điều kiện logic bắt buộc của đề bài (ví dụ: `(i), (ii)`).
 
 ## Quy định đặt tên (Naming Convention)
 Để giao diện bảng danh sách trông gọn gàng và thống nhất, hãy tuân thủ cấu trúc sau:
 
-**1. ID Bài tập:**
-- Đề thường: `vao10_math_XXX`
-- Đề chuyên / HSG: `vao10chuyen_math_XXX`
+**1. ID Bài tập (Bắt buộc phải nối tiếp ID cũ):**
+- Đề thường: `vao10_math_XXX` (trong đó XXX là số thứ tự có 3 chữ số, ví dụ `vao10_math_012`)
+- Đề chuyên / HSG: `vao10chuyen_math_XXX` (ví dụ `vao10chuyen_math_047`)
+*Lưu ý quan trọng:* Phải kiểm tra ID cuối cùng đang có trong cơ sở dữ liệu để đánh số tiếp theo. Tuyệt đối không tự bịa ID chứa tên tỉnh hay ký tự chữ cái ở đuôi (sai: `vao10chuyen_math_hanoi_2025`).
 
 **2. Đề vào 10 (Thường)** (`subcategory: "vao_10"`)
 - **Tên bài (Title)**: `[Tag] - Đề vào 10 [Tên tỉnh] [Năm]` (Vd: `Hình học - Đề vào 10 Hà Nội 2025`)
