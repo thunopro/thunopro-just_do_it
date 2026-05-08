@@ -602,7 +602,7 @@ async function renderEditBlogForm(id) {
 // ===== MATH =====
 async function fetchMathProblems(subcategory) {
     try {
-        let url = SUPABASE_URL + '/rest/v1/math_problems?select=*&order=created_at.desc';
+        let url = SUPABASE_URL + '/rest/v1/math_problems?select=*&order=id.desc';
         if (subcategory) {
             url += '&subcategory=eq.' + encodeURIComponent(subcategory);
         }
@@ -1372,5 +1372,38 @@ getSupabase().auth.getSession().then(function(res) {
         loadCompletedProblems(currentUser.id);
     } else {
         updateAuthBtn(null);
+    }
+});
+
+// Thêm sự kiện đóng modal khi bấm phím Esc
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        // 1. Ưu tiên đóng Modal xem ảnh trước (nếu đang mở)
+        var imgModal = document.getElementById('img-viewer-modal');
+        if (imgModal && imgModal.style.display !== 'none') {
+            imgModal.style.display = 'none';
+            return;
+        }
+
+        // 2. Đóng Modal xem bài nộp của user (nếu đang mở đè lên danh sách)
+        var submissionModal = document.getElementById('submission-modal');
+        if (submissionModal) {
+            submissionModal.remove();
+            return; 
+        }
+
+        // 3. Đóng Modal danh sách đã giải
+        var solversModal = document.getElementById('solvers-modal');
+        if (solversModal) {
+            solversModal.remove();
+            return;
+        }
+
+        // 4. Đóng Modal đăng nhập/đăng ký
+        var authModal = document.getElementById('auth-modal');
+        if (authModal && authModal.style.display !== 'none') {
+            authModal.style.display = 'none';
+            return;
+        }
     }
 });
